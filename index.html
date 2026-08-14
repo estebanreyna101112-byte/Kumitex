@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kumitex — Infraestructura digital para torneos de karate</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --bg-soft:#111113;
+    --surface:#161719;
+    --surface-2:#1d1e21;
+    --border:#2a2b2f;
+    --border-soft:#e7e5e1;
+    --text:#f5f4f2;
+    --text-dim:#a6a7ac;
+    --text-faint:#6d6e73;
+    --paper:#f7f6f3;
+    --paper-dim:#efeee9;
+    --ink:#111113;
+    --ink-dim:#5b5c60;
+    --accent:#e2262e;
+    --accent-2:#ff4a52;
+    --accent-dim:#5c161a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .font-display{font-family:'Space Grotesk',sans-serif;}
+  .font-mono{font-family:'JetBrains Mono',monospace;}
+  ::selection{background:var(--accent);color:#fff;}
+
+  .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1);}
+  .reveal.is-visible{opacity:1;transform:translateY(0);}
+  .reveal-delay-1{transition-delay:.08s;}
+  .reveal-delay-2{transition-delay:.16s;}
+  .reveal-delay-3{transition-delay:.24s;}
+  .reveal-delay-4{transition-delay:.32s;}
+
+  @media (prefers-reduced-motion: reduce){
+    .reveal{opacity:1!important;transform:none!important;transition:none!important;}
+    *{animation:none!important;}
+  }
+
+  .tatami-grid{
+    background-image:
+      linear-gradient(rgba(245,244,242,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,244,242,.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  .noise-fade{
+    background: radial-gradient(circle at 50% 0%, rgba(226,38,46,.14), transparent 55%);
+  }
+
+  .hairline{border-color:var(--border);}
+
+  .pulse-dot{
+    box-shadow:0 0 0 0 rgba(226,38,46,.6);
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(226,38,46,.55);}
+    70%{box-shadow:0 0 0 8px rgba(226,38,46,0);}
+    100%{box-shadow:0 0 0 0 rgba(226,38,46,0);}
+  }
+
+  .float-slow{animation:floatY 6s ease-in-out infinite;}
+  .float-slow-2{animation:floatY 7s ease-in-out infinite;animation-delay:.6s;}
+  @keyframes floatY{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-10px);}
+  }
+
+  .mockup-shell{
+    background:linear-gradient(180deg,#141518,#0e0f11);
+    border:1px solid var(--border);
+    box-shadow:0 40px 80px -30px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.02) inset;
+  }
+
+  .card-hover{transition:transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s ease, background .35s ease;}
+  .card-hover:hover{transform:translateY(-4px);border-color:rgba(226,38,46,.4);}
+
+  .link-underline{position:relative;}
+  .link-underline::after{
+    content:'';position:absolute;left:0;bottom:-3px;width:0;height:1px;background:var(--text);
+    transition:width .3s ease;
+  }
+  .link-underline:hover::after{width:100%;}
+
+  .bracket-line{stroke:var(--border);stroke-width:1.5;}
+  .bracket-line-active{stroke:var(--accent);stroke-width:1.5;}
+
+  .scrollbar-hide::-webkit-scrollbar{display:none;}
+  .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none;}
+
+  .btn-primary{
+    background:var(--accent);
+    color:#fff;
+    transition:background .25s ease, transform .25s ease;
+  }
+  .btn-primary:hover{background:#c71e25;transform:translateY(-1px);}
+
+  .btn-ghost{
+    border:1px solid rgba(245,244,242,.25);
+    color:var(--text);
+    transition:border-color .25s ease, background .25s ease;
+  }
+  .btn-ghost:hover{border-color:rgba(245,244,242,.6);background:rgba(245,244,242,.04);}
+
+  .btn-ghost-dark{
+    border:1px solid rgba(17,17,19,.2);
+    color:var(--ink);
+    transition:border-color .25s ease, background .25s ease;
+  }
+  .btn-ghost-dark:hover{border-color:rgba(17,17,19,.5);background:rgba(17,17,19,.05);}
+
+  .faq-item.open .faq-icon{transform:rotate(45deg);}
+  .faq-item .faq-panel{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+  .faq-item.open .faq-panel{max-height:280px;}
+
+  .stat-num{font-variant-numeric:tabular-nums;}
+
+  .clip-belt{clip-path:polygon(0 0,100% 0,100% 65%,50% 100%,0 65%);}
+
+  #mobile-menu{transition:transform .35s cubic-bezier(.2,.7,.2,1), opacity .3s ease;}
+
+  .grain{position:relative;}
+  .grain::before{
+    content:'';position:absolute;inset:0;pointer-events:none;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- =================== NAVBAR =================== -->
+<header id="navbar" class="fixed top-0 left-0 right-0 z-50 border-b hairline transition-colors duration-300" style="background:rgba(10,10,11,.82);backdrop-filter:blur(10px);">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10">
+    <div class="flex items-center justify-between h-[68px]">
+      <a href="#top" class="font-display font-semibold text-lg tracking-tight flex items-center gap-2.5">
+        <span class="inline-flex w-8 h-8 rounded-md bg-white items-center justify-center p-1.5 shrink-0">
+          <img src="assets/img-1.png" alt="Kumitex" class="w-full h-full object-contain">
+        </span>
+        KUMITEX
+      </a>
+
+      <nav class="hidden lg:flex items-center gap-9 text-sm text-[var(--text-dim)] font-mono uppercase tracking-wide" style="font-size:12.5px;">
+        <a href="#top" class="link-underline hover:text-white transition-colors">Inicio</a>
+        <a href="#ejemplo" class="link-underline hover:text-white transition-colors">Ejemplos</a>
+        <a href="#funcionalidades" class="link-underline hover:text-white transition-colors">Funcionalidades</a>
+        <a href="#proceso" class="link-underline hover:text-white transition-colors">Cómo funciona</a>
+        <a href="#contacto" class="link-underline hover:text-white transition-colors">Contacto</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <button type="button" class="open-demo-modal hidden sm:inline-flex btn-primary text-sm font-medium px-5 py-2.5">Solicitar una demo</button>
+        <button id="menu-btn" class="lg:hidden w-9 h-9 flex flex-col items-center justify-center gap-[5px]" aria-label="Abrir menú">
+          <span class="block w-5 h-[1.5px] bg-white"></span>
+          <span class="block w-5 h-[1.5px] bg-white"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- mobile menu -->
+  <div id="mobile-menu" class="lg:hidden fixed inset-0 top-[68px] bg-[var(--bg)] translate-x-full opacity-0 pointer-events-none">
+    <div class="flex flex-col px-6 py-8 gap-6 text-xl font-display">
+      <a href="#top" class="mobile-link">Inicio</a>
+      <a href="#ejemplo" class="mobile-link">Ejemplos</a>
+      <a href="#funcionalidades" class="mobile-link">Funcionalidades</a>
+      <a href="#proceso" class="mobile-link">Cómo funciona</a>
+      <a href="#contacto" class="mobile-link">Contacto</a>
+      <button type="button" class="open-demo-modal btn-primary text-center py-3 mt-4 font-sans text-base">Solicitar una demo</button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- =================== HERO =================== -->
+<section class="relative pt-[68px] overflow-hidden">
+  <div class="absolute inset-0">
+    <img src="assets/img-2.jpg" alt="Torneo internacional de karate" class="w-full h-full object-cover">
+    <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(10,10,11,.5) 0%,rgba(10,10,11,.6) 55%,rgba(10,10,11,.9) 100%);"></div>
+    <div class="absolute inset-0 tatami-grid opacity-40"></div>
+    <div class="hidden lg:block absolute inset-0" style="background:linear-gradient(90deg,rgba(10,10,11,.75) 0%,rgba(10,10,11,.35) 42%,rgba(10,10,11,.1) 75%);"></div>
+  </div>
+  <div class="max-w-7xl mx-auto px-6 lg:px-10 pt-20 pb-28 lg:pt-28 lg:pb-36 grid lg:grid-cols-2 gap-16 items-center relative">
+
+    <div class="reveal">
+      <div class="inline-flex items-center gap-2 border hairline px-3 py-1.5 mb-8 font-mono text-[11px] tracking-widest uppercase text-[var(--text-dim)]">
+        <span class="w-1.5 h-1.5 rounded-full bg-[var(--accent)] pulse-dot"></span>
+        Tecnología para torneos de karate
+      </div>
+
+      <h1 class="font-display text-[42px] sm:text-[54px] lg:text-[64px] leading-[1.04] font-semibold tracking-tight mb-7">
+        Tus torneos.<br>
+        Una sola plataforma<br class="hidden sm:block">
+        para organizarlos todos.
+      </h1>
+
+      <p class="text-[var(--text-dim)] text-lg leading-relaxed max-w-md mb-10">
+        Kumitex es la plataforma para organizar todos los torneos de karate que quieras: inscripciones, categorías, llaves, resultados y clasificación final, desde una misma página.
+      </p>
+
+      <div class="flex flex-wrap gap-4 mb-5">
+        <button type="button" class="open-demo-modal btn-primary px-7 py-3.5 text-sm font-medium">Solicitar una demo</button>
+        <a href="#funcionalidades" class="btn-ghost px-7 py-3.5 text-sm font-medium">Ver cómo funciona</a>
+      </div>
+    </div>
+
+    <!-- Hero platform mockup -->
+    <div class="reveal reveal-delay-2 relative">
+      <div class="mockup-shell rounded-xl p-4 sm:p-5 relative float-slow">
+        <div class="flex items-center justify-between mb-4 px-1">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3a3b3f]"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3a3b3f]"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3a3b3f]"></span>
+          </div>
+          <span class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)]">kumitex.app</span>
+        </div>
+
+        <div class="bg-[var(--surface)] border hairline rounded-lg p-5">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <p class="font-display text-base font-semibold">International Karate Open</p>
+              <p class="font-mono text-[11px] text-[var(--text-faint)] mt-0.5">SANTIAGO · 14–16 NOV</p>
+            </div>
+            <span class="font-mono text-[10px] uppercase tracking-widest text-[var(--accent-2)] flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[var(--accent)] pulse-dot"></span> Live
+            </span>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2.5 mb-5">
+            <div class="bg-[var(--surface-2)] rounded-md p-3">
+              <p class="font-mono text-[9px] uppercase text-[var(--text-faint)] mb-1">Participantes</p>
+              <p class="font-display text-lg font-semibold">1.248</p>
+            </div>
+            <div class="bg-[var(--surface-2)] rounded-md p-3">
+              <p class="font-mono text-[9px] uppercase text-[var(--text-faint)] mb-1">Países</p>
+              <p class="font-display text-lg font-semibold">24</p>
+            </div>
+            <div class="bg-[var(--surface-2)] rounded-md p-3">
+              <p class="font-mono text-[9px] uppercase text-[var(--text-faint)] mb-1">Clubes</p>
+              <p class="font-display text-lg font-semibold">86</p>
+            </div>
+            <div class="bg-[var(--surface-2)] rounded-md p-3">
+              <p class="font-mono text-[9px] uppercase text-[var(--text-faint)] mb-1">Tatamis</p>
+              <p class="font-display text-lg font-semibold">08</p>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex items-center justify-between bg-[var(--surface-2)] rounded-md px-3.5 py-2.5">
+              <div class="flex items-center gap-2.5">
+                <span class="font-mono text-[10px] text-[var(--text-faint)]">TATAMI 03</span>
+                <span class="text-sm">Kumite −67kg · Cuartos</span>
+              </div>
+              <span class="font-mono text-[11px] text-[var(--accent-2)]">2 — 1</span>
+            </div>
+            <div class="flex items-center justify-between bg-[var(--surface-2)] rounded-md px-3.5 py-2.5">
+              <div class="flex items-center gap-2.5">
+                <span class="font-mono text-[10px] text-[var(--text-faint)]">TATAMI 05</span>
+                <span class="text-sm">Kata individual · Senior</span>
+              </div>
+              <span class="font-mono text-[11px] text-[var(--text-faint)]">En espera</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating cards -->
+      <div class="hidden sm:block absolute -left-8 top-8 bg-[var(--surface)] border hairline rounded-lg px-4 py-3 shadow-2xl float-slow-2">
+        <p class="font-mono text-[9px] uppercase text-[var(--text-faint)]">Combates</p>
+        <p class="font-display text-xl font-semibold">342</p>
+      </div>
+      <div class="hidden sm:block absolute -right-6 bottom-10 bg-[var(--surface)] border hairline rounded-lg px-4 py-3 shadow-2xl float-slow">
+        <p class="font-mono text-[9px] uppercase text-[var(--text-faint)]">Países representados</p>
+        <p class="font-display text-xl font-semibold">24</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== CASO REAL =================== -->
+<section id="ejemplo" class="bg-[var(--bg)] border-t hairline py-24 lg:py-32 overflow-hidden">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10">
+    <div class="max-w-2xl mb-14 reveal">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">Casos reales</p>
+      <h2 class="font-display text-[32px] sm:text-[42px] font-semibold leading-tight mb-5">Así lo usan las organizaciones que confían en nosotros.</h2>
+      <p class="text-[var(--text-dim)] text-lg leading-relaxed">Este es un ejemplo real de una plataforma que desarrollamos para World Kyokushin Budokai, con su propia identidad, torneos e inscripciones funcionando en vivo.</p>
+    </div>
+
+    <div class="mockup-shell rounded-xl p-4 sm:p-5 reveal reveal-delay-1">
+      <div class="flex items-center justify-between mb-4 px-1">
+        <div class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#3a3b3f]"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-[#3a3b3f]"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-[#3a3b3f]"></span>
+        </div>
+        <span class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)]">worldkyokushinbudokai.cl</span>
+      </div>
+      <div class="rounded-lg overflow-hidden border hairline">
+        <img src="assets/img-3.jpg" alt="Ejemplo de plataforma de torneos desarrollada para World Kyokushin Budokai" class="w-full h-auto block">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== PROBLEMA =================== -->
+<section class="bg-[var(--bg)] py-24 lg:py-32 border-t hairline overflow-hidden">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-16 items-center">
+    <div class="reveal order-2 lg:order-1 relative h-[360px] sm:h-[420px]">
+      <!-- chaotic overlapping windows -->
+      <div class="absolute left-0 top-4 w-[78%] sm:w-[72%] bg-[var(--surface)] border hairline rounded-lg shadow-2xl p-4 -rotate-3">
+        <div class="flex gap-1.5 mb-3"><span class="w-2 h-2 rounded-full bg-[#3a3b3f]"></span><span class="w-2 h-2 rounded-full bg-[#3a3b3f]"></span><span class="w-2 h-2 rounded-full bg-[#3a3b3f]"></span></div>
+        <p class="font-mono text-[10px] text-[var(--text-faint)] mb-2">inscripciones_final_v3.xlsx</p>
+        <div class="space-y-1.5">
+          <div class="h-2 bg-[var(--surface-2)] rounded w-full"></div>
+          <div class="h-2 bg-[var(--surface-2)] rounded w-5/6"></div>
+          <div class="h-2 bg-[var(--surface-2)] rounded w-2/3"></div>
+        </div>
+      </div>
+      <div class="absolute right-0 top-24 sm:top-32 w-[68%] sm:w-[60%] bg-[var(--surface)] border hairline rounded-lg shadow-2xl p-4 rotate-2">
+        <div class="flex gap-1.5 mb-3"><span class="w-2 h-2 rounded-full bg-[#3a3b3f]"></span><span class="w-2 h-2 rounded-full bg-[#3a3b3f]"></span><span class="w-2 h-2 rounded-full bg-[#3a3b3f]"></span></div>
+        <p class="font-mono text-[10px] text-[var(--text-faint)] mb-2">grupo — categorías cambio</p>
+        <div class="space-y-1.5">
+          <div class="h-2 bg-[var(--surface-2)] rounded w-full"></div>
+          <div class="h-2 bg-[var(--surface-2)] rounded w-1/2"></div>
+        </div>
+      </div>
+      <div class="absolute left-6 sm:left-14 bottom-2 w-[70%] sm:w-[62%] bg-[var(--surface)] border hairline rounded-lg shadow-2xl p-4 rotate-1">
+        <div class="flex gap-1.5 mb-3"><span class="w-2 h-2 rounded-full bg-[#3a3b3f]"></span><span class="w-2 h-2 rounded-full bg-[#3a3b3f]"></span><span class="w-2 h-2 rounded-full bg-[#3a3b3f]"></span></div>
+        <p class="font-mono text-[10px] text-[var(--text-faint)] mb-2">llaves_impresas.pdf</p>
+        <div class="space-y-1.5">
+          <div class="h-2 bg-[var(--surface-2)] rounded w-4/5"></div>
+          <div class="h-2 bg-[var(--surface-2)] rounded w-full"></div>
+          <div class="h-2 bg-[var(--surface-2)] rounded w-1/3"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal reveal-delay-1 order-1 lg:order-2">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">El problema</p>
+      <h2 class="font-display text-[30px] sm:text-[38px] font-semibold leading-tight mb-6">
+        Organizar un torneo no debería significar trabajar con diez herramientas diferentes.
+      </h2>
+      <p class="text-[var(--text-dim)] text-lg leading-relaxed mb-6">
+        Hojas de cálculo, formularios sueltos, listas impresas, cambios de último minuto por WhatsApp. Cada herramienta guarda su propia versión de la verdad, y tu equipo pierde horas conciliándolas mientras el reloj de la competición sigue corriendo.
+      </p>
+      <div class="flex items-center gap-3 font-display text-xl font-semibold">
+        <span class="text-[var(--text-faint)]">→</span>
+        <span>Una sola plataforma. Una sola fuente de información.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== SOLUCIÓN =================== -->
+<section class="bg-[var(--bg-soft)] border-t hairline py-24 lg:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10">
+    <div class="max-w-2xl mb-14 reveal">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">La solución</p>
+      <h2 class="font-display text-[32px] sm:text-[42px] font-semibold leading-tight mb-5">Transformamos la organización de tus torneos en una experiencia digital.</h2>
+      <p class="text-[var(--text-dim)] text-lg leading-relaxed">Centralizamos participantes, categorías, llaves, tatamis y resultados en un único sistema que puedes reutilizar en cada torneo que organices, accesible para tu equipo, tus árbitros y cada competidor.</p>
+    </div>
+
+    <div class="mockup-shell rounded-xl p-6 sm:p-8 reveal reveal-delay-1">
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-6 sm:gap-4">
+        <div class="stat-block text-center sm:text-left" data-count="1248">
+          <p class="font-display text-3xl sm:text-4xl font-semibold stat-num"><span class="stat-val">0</span></p>
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-2">Participantes</p>
+        </div>
+        <div class="stat-block text-center sm:text-left" data-count="24">
+          <p class="font-display text-3xl sm:text-4xl font-semibold stat-num"><span class="stat-val">0</span></p>
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-2">Países</p>
+        </div>
+        <div class="stat-block text-center sm:text-left" data-count="86">
+          <p class="font-display text-3xl sm:text-4xl font-semibold stat-num"><span class="stat-val">0</span></p>
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-2">Clubes</p>
+        </div>
+        <div class="stat-block text-center sm:text-left" data-count="8">
+          <p class="font-display text-3xl sm:text-4xl font-semibold stat-num"><span class="stat-val">0</span></p>
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-2">Tatamis</p>
+        </div>
+        <div class="stat-block text-center sm:text-left col-span-2 sm:col-span-1" data-count="342">
+          <p class="font-display text-3xl sm:text-4xl font-semibold stat-num"><span class="stat-val">0</span></p>
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-2">Combates</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== FUNCIONALIDADES =================== -->
+<section id="funcionalidades" class="bg-[var(--bg)] border-t hairline py-24 lg:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10">
+    <div class="max-w-2xl mb-16 reveal">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">Funcionalidades</p>
+      <h2 class="font-display text-[32px] sm:text-[42px] font-semibold leading-tight">Todo lo que necesitas, para cada torneo que organices.</h2>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--border)] border hairline reveal reveal-delay-1">
+      <!-- feature cards -->
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 2v4M16 2v4M4 10h16"/><path d="M9 15l2 2 4-4"/></svg>
+        <p class="font-display font-semibold mb-2">Gestión multi-torneo</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Crea y administra todos los torneos que organice tu equipo desde tu misma página, cada uno con su propia configuración.</p>
+      </div>
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 12h6M9 16h6M9 8h6M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg>
+        <p class="font-display font-semibold mb-2">Inscripciones</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Gestiona participantes, clubes, categorías y registros desde una única plataforma.</p>
+      </div>
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M8 11v2a3 3 0 003 3h2"/></svg>
+        <p class="font-display font-semibold mb-2">Sistema de llaves</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Genera y visualiza brackets de competición de forma clara y profesional.</p>
+      </div>
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>
+        <p class="font-display font-semibold mb-2">Gestión de categorías</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Organiza kata, kumite, edades, pesos, niveles y divisiones.</p>
+      </div>
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21c4.97-3.5 8-7.1 8-11a8 8 0 10-16 0c0 3.9 3.03 7.5 8 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        <p class="font-display font-semibold mb-2">Países y organizaciones</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Visualiza la participación internacional y la representación de cada organización.</p>
+      </div>
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        <p class="font-display font-semibold mb-2">Tatamis y horarios</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Organiza el flujo de competición y asigna categorías a cada tatami.</p>
+      </div>
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>
+        <p class="font-display font-semibold mb-2">Resultados en tiempo real</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Publica resultados y clasificaciones de forma rápida y accesible.</p>
+      </div>
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 20V10M10 20V4M17 20v-7"/></svg>
+        <p class="font-display font-semibold mb-2">Clasificaciones</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Rankings por categoría, club y país actualizados en tiempo real.</p>
+      </div>
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+        <p class="font-display font-semibold mb-2">Perfiles de participantes</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Cada competidor puede consultar su información, categoría y progreso.</p>
+      </div>
+      <div class="bg-[var(--bg)] p-7 card-hover">
+        <svg class="w-6 h-6 mb-5 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="19" cy="18" r="2"/></svg>
+        <p class="font-display font-semibold mb-2">Diseño personalizado</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Cada torneo puede tener su propia identidad visual, logo, colores y dominio.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== SISTEMA DE LLAVES =================== -->
+<section class="bg-[var(--bg-soft)] border-t hairline py-24 lg:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10">
+    <div class="max-w-2xl mb-14 reveal">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">Sistema de llaves</p>
+      <h2 class="font-display text-[32px] sm:text-[42px] font-semibold leading-tight">Las llaves de tu torneo, claras para todos.</h2>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center reveal reveal-delay-1">
+      <div class="mockup-shell rounded-xl p-4 sm:p-5 max-w-md w-full mx-auto lg:mx-0">
+        <div class="flex items-center justify-between mb-4 px-1">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3a3b3f]"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3a3b3f]"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3a3b3f]"></span>
+          </div>
+          <span class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)]">kumitex.app/llaves</span>
+        </div>
+        <div class="rounded-lg overflow-hidden border hairline">
+        <img src="assets/img-4.png" alt="Sistema de llaves de Kumitex mostrando la semifinal de kumite varón experto -90kg, en vivo" class="w-full h-auto block">
+        </div>
+      </div>
+      <div>
+        <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-3">Captura real de la plataforma</p>
+        <p class="text-[var(--text-dim)] text-base leading-relaxed max-w-sm mb-5">Este es un ejemplo del trabajo que hacemos: la vista de llaves de un torneo real gestionado en Kumitex, con categorías, estado en vivo y edición de resultados desde un mismo panel.</p>
+        <ul class="space-y-2.5 text-sm text-[var(--text-dim)]">
+          <li class="flex items-center gap-2.5"><span class="w-1 h-1 rounded-full bg-[var(--accent)]"></span>Actualización de resultados en tiempo real</li>
+          <li class="flex items-center gap-2.5"><span class="w-1 h-1 rounded-full bg-[var(--accent)]"></span>Filtro por categoría desde la misma vista</li>
+          <li class="flex items-center gap-2.5"><span class="w-1 h-1 rounded-full bg-[var(--accent)]"></span>Regeneración de llaves con un clic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== INSCRIPCIONES =================== -->
+<section class="bg-[var(--bg)] border-t hairline py-24 lg:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-14 items-center">
+    <div class="reveal">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">Inscripciones</p>
+      <h2 class="font-display text-[30px] sm:text-[38px] font-semibold leading-tight mb-5">Registro de participantes sin planillas ni correos cruzados.</h2>
+      <p class="text-[var(--text-dim)] text-lg leading-relaxed">Cada participante se inscribe directamente en la plataforma. Tu equipo revisa, aprueba y organiza categorías desde un mismo panel, con el total actualizado en todo momento.</p>
+    </div>
+
+    <div class="reveal reveal-delay-1 grid sm:grid-cols-5 gap-4">
+      <div class="sm:col-span-3 bg-[var(--surface)] border hairline rounded-lg p-6">
+        <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-5">Nueva inscripción</p>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <p class="text-[11px] text-[var(--text-faint)] mb-1.5">Nombre</p>
+            <div class="border hairline rounded-md h-9 bg-[var(--surface-2)]"></div>
+          </div>
+          <div>
+            <p class="text-[11px] text-[var(--text-faint)] mb-1.5">Apellido</p>
+            <div class="border hairline rounded-md h-9 bg-[var(--surface-2)]"></div>
+          </div>
+          <div>
+            <p class="text-[11px] text-[var(--text-faint)] mb-1.5">Fecha de nacimiento</p>
+            <div class="border hairline rounded-md h-9 bg-[var(--surface-2)]"></div>
+          </div>
+          <div>
+            <p class="text-[11px] text-[var(--text-faint)] mb-1.5">País</p>
+            <div class="border hairline rounded-md h-9 bg-[var(--surface-2)]"></div>
+          </div>
+          <div>
+            <p class="text-[11px] text-[var(--text-faint)] mb-1.5">Club</p>
+            <div class="border hairline rounded-md h-9 bg-[var(--surface-2)]"></div>
+          </div>
+          <div>
+            <p class="text-[11px] text-[var(--text-faint)] mb-1.5">Categoría</p>
+            <div class="border hairline rounded-md h-9 bg-[var(--surface-2)]"></div>
+          </div>
+          <div class="col-span-2">
+            <p class="text-[11px] text-[var(--text-faint)] mb-1.5">Modalidad</p>
+            <div class="flex gap-2">
+              <div class="border hairline rounded-md px-3 py-1.5 text-xs text-[var(--text-dim)] bg-[var(--surface-2)]">Kata</div>
+              <div class="border rounded-md px-3 py-1.5 text-xs bg-[var(--accent-dim)] border-[var(--accent)] text-[var(--accent-2)]">Kumite</div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-primary text-center text-xs font-medium py-2.5 mt-5">Confirmar inscripción</div>
+      </div>
+
+      <div class="sm:col-span-2 flex flex-col gap-3">
+        <div class="bg-[var(--surface)] border hairline rounded-lg p-5">
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Confirmadas</p>
+          <p class="font-display text-2xl font-semibold">1.114</p>
+        </div>
+        <div class="bg-[var(--surface)] border hairline rounded-lg p-5">
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Pendientes</p>
+          <p class="font-display text-2xl font-semibold">134</p>
+        </div>
+        <div class="bg-[var(--surface)] border hairline rounded-lg p-5">
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Total participantes</p>
+          <p class="font-display text-2xl font-semibold text-[var(--accent-2)]">1.248</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== GESTIÓN DEL TORNEO / ORGANIZADORES =================== -->
+<section class="bg-[var(--bg-soft)] border-t hairline py-24 lg:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10">
+    <div class="max-w-2xl mb-14 reveal">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">Para organizadores</p>
+      <h2 class="font-display text-[32px] sm:text-[42px] font-semibold leading-tight">Control total para el equipo organizador.</h2>
+      <p class="text-[var(--text-dim)] text-lg leading-relaxed mt-5">Un panel administrativo pensado para gestionar cada aspecto del torneo sin perder tiempo entre pantallas.</p>
+    </div>
+
+    <div class="mockup-shell rounded-xl overflow-hidden reveal reveal-delay-1">
+      <div class="grid lg:grid-cols-[220px_1fr]">
+        <div class="border-r hairline p-5 hidden lg:block">
+          <div class="space-y-1 font-mono text-[11px] text-[var(--text-faint)] uppercase tracking-wide">
+            <div class="px-3 py-2 rounded-md bg-[var(--surface-2)] text-white">Participantes</div>
+            <div class="px-3 py-2">Categorías</div>
+            <div class="px-3 py-2">Llaves</div>
+            <div class="px-3 py-2">Tatamis</div>
+            <div class="px-3 py-2">Horarios</div>
+            <div class="px-3 py-2">Resultados</div>
+            <div class="px-3 py-2">Exportar datos</div>
+            <div class="px-3 py-2">Configuración</div>
+          </div>
+        </div>
+        <div class="p-6 sm:p-8">
+          <div class="flex items-center justify-between mb-6">
+            <p class="font-display font-semibold text-lg">Panel de participantes</p>
+            <div class="border hairline rounded-md px-3 py-1.5 font-mono text-[10px] text-[var(--text-faint)]">Exportar CSV</div>
+          </div>
+          <div class="border hairline rounded-lg overflow-hidden">
+            <div class="grid grid-cols-5 gap-2 px-4 py-2.5 bg-[var(--surface-2)] font-mono text-[9px] uppercase tracking-widest text-[var(--text-faint)]">
+              <span>Nombre</span><span>Club</span><span>País</span><span>Categoría</span><span>Estado</span>
+            </div>
+            <div class="grid grid-cols-5 gap-2 px-4 py-3 text-sm border-t hairline"><span>Carlos Martínez</span><span class="text-[var(--text-faint)]">Shotokan CL</span><span class="text-[var(--text-faint)]">Chile</span><span class="text-[var(--text-faint)]">Kumite −67kg</span><span class="text-[var(--accent-2)]">Confirmado</span></div>
+            <div class="grid grid-cols-5 gap-2 px-4 py-3 text-sm border-t hairline"><span>Ana Kowalski</span><span class="text-[var(--text-faint)]">Budokan PL</span><span class="text-[var(--text-faint)]">Polonia</span><span class="text-[var(--text-faint)]">Kata Senior</span><span class="text-[var(--accent-2)]">Confirmado</span></div>
+            <div class="grid grid-cols-5 gap-2 px-4 py-3 text-sm border-t hairline"><span>Diego Rossi</span><span class="text-[var(--text-faint)]">Karate Milano</span><span class="text-[var(--text-faint)]">Italia</span><span class="text-[var(--text-faint)]">Kumite −75kg</span><span class="text-[var(--text-faint)]">Pendiente</span></div>
+            <div class="grid grid-cols-5 gap-2 px-4 py-3 text-sm border-t hairline"><span>Marina Costa</span><span class="text-[var(--text-faint)]">Dojo Lisboa</span><span class="text-[var(--text-faint)]">Portugal</span><span class="text-[var(--text-faint)]">Kata Junior</span><span class="text-[var(--accent-2)]">Confirmado</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== PARTICIPANTES =================== -->
+<section class="bg-[var(--bg)] border-t hairline py-24 lg:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-16 items-center">
+    <div class="reveal order-2 lg:order-1 flex justify-center">
+      <div class="w-[260px] rounded-[2rem] border hairline p-2.5" style="background:linear-gradient(180deg,#141518,#0e0f11);">
+        <div class="bg-[var(--surface)] rounded-[1.5rem] overflow-hidden">
+          <div class="px-4 pt-5 pb-4 border-b hairline">
+            <p class="font-mono text-[9px] uppercase tracking-widest text-[var(--text-faint)]">Mi torneo</p>
+            <p class="font-display font-semibold text-sm mt-1">Carlos Martínez</p>
+            <p class="text-[11px] text-[var(--text-faint)]">Kumite −67kg</p>
+          </div>
+          <div class="p-4 space-y-3">
+            <div class="bg-[var(--surface-2)] rounded-lg p-3">
+              <p class="font-mono text-[9px] uppercase text-[var(--text-faint)] mb-1">Próximo combate</p>
+              <p class="text-sm">vs. Diego Rossi</p>
+              <p class="text-[11px] text-[var(--accent-2)] mt-1">Tatami 03 · 16:40</p>
+            </div>
+            <div class="bg-[var(--surface-2)] rounded-lg p-3">
+              <p class="font-mono text-[9px] uppercase text-[var(--text-faint)] mb-1">Resultados</p>
+              <p class="text-sm">Octavos <span class="text-[var(--text-faint)]">— ganado 2–0</span></p>
+              <p class="text-sm">Cuartos <span class="text-[var(--text-faint)]">— ganado 2–1</span></p>
+            </div>
+            <div class="bg-[var(--surface-2)] rounded-lg p-3">
+              <p class="font-mono text-[9px] uppercase text-[var(--text-faint)] mb-1">Posición actual</p>
+              <p class="text-sm">Semifinalista</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal reveal-delay-1 order-1 lg:order-2">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">Para participantes</p>
+      <h2 class="font-display text-[30px] sm:text-[38px] font-semibold leading-tight mb-5">Una mejor experiencia para cada competidor.</h2>
+      <p class="text-[var(--text-dim)] text-lg leading-relaxed">Desde el teléfono, cada participante consulta su categoría, su tatami, su horario, su próximo rival y sus resultados, sin depender de listas impresas ni preguntas de último minuto.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =================== PERSONALIZACIÓN =================== -->
+<section class="bg-[var(--bg-soft)] border-t hairline py-24 lg:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10">
+    <div class="max-w-2xl mb-14 reveal">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">Personalización</p>
+      <h2 class="font-display text-[32px] sm:text-[42px] font-semibold leading-tight mb-5">Cada torneo debe sentirse como tu torneo.</h2>
+      <p class="text-[var(--text-dim)] text-lg leading-relaxed">Dentro de tu misma página, cada evento que crees puede tener su propio logo, colores, banner y dominio.</p>
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-5 reveal reveal-delay-1">
+      <div class="border hairline rounded-lg overflow-hidden card-hover">
+        <div class="h-32 relative" style="background:linear-gradient(135deg,#141518,#e2262e22);">
+          <div class="absolute inset-0 tatami-grid opacity-40"></div>
+          <span class="absolute bottom-3 left-4 font-mono text-[10px] uppercase tracking-widest text-[var(--accent-2)]">Identidad 01</span>
+        </div>
+        <div class="p-5 bg-[var(--surface)]">
+          <p class="font-display font-semibold">International Karate Open</p>
+          <p class="text-[11px] text-[var(--text-faint)] mt-1 font-mono">kumitex.app/iko</p>
+        </div>
+      </div>
+      <div class="border hairline rounded-lg overflow-hidden card-hover">
+        <div class="h-32 relative" style="background:linear-gradient(135deg,#141518,#3a5f8a33);">
+          <div class="absolute inset-0 tatami-grid opacity-40"></div>
+          <span class="absolute bottom-3 left-4 font-mono text-[10px] uppercase tracking-widest text-[#7fb3e0]">Identidad 02</span>
+        </div>
+        <div class="p-5 bg-[var(--surface)]">
+          <p class="font-display font-semibold">National Championship</p>
+          <p class="text-[11px] text-[var(--text-faint)] mt-1 font-mono">kumitex.app/nc</p>
+        </div>
+      </div>
+      <div class="border hairline rounded-lg overflow-hidden card-hover">
+        <div class="h-32 relative" style="background:linear-gradient(135deg,#141518,#d9a03533);">
+          <div class="absolute inset-0 tatami-grid opacity-40"></div>
+          <span class="absolute bottom-3 left-4 font-mono text-[10px] uppercase tracking-widest text-[#e0b24f]">Identidad 03</span>
+        </div>
+        <div class="p-5 bg-[var(--surface)]">
+          <p class="font-display font-semibold">Grand Prix</p>
+          <p class="text-[11px] text-[var(--text-faint)] mt-1 font-mono">kumitex.app/gp</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== PROCESO =================== -->
+<section id="proceso" class="bg-[var(--bg)] border-t hairline py-24 lg:py-32">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10">
+    <div class="max-w-2xl mb-16 reveal">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4">Cómo funciona</p>
+      <h2 class="font-display text-[32px] sm:text-[42px] font-semibold leading-tight">De tu página a todos tus torneos.</h2>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 reveal reveal-delay-1">
+      <div class="border-t-2 border-[var(--accent)] pt-5">
+        <p class="font-mono text-sm text-[var(--text-faint)] mb-3">01</p>
+        <p class="font-display font-semibold mb-2">Tu página está lista</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Accede a tu plataforma y comienza a configurar tu organización.</p>
+      </div>
+      <div class="border-t-2 border-[var(--border)] pt-5">
+        <p class="font-mono text-sm text-[var(--text-faint)] mb-3">02</p>
+        <p class="font-display font-semibold mb-2">Creas tu primer torneo</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Identidad visual, categorías, tatamis y horarios, configurados en minutos.</p>
+      </div>
+      <div class="border-t-2 border-[var(--border)] pt-5">
+        <p class="font-mono text-sm text-[var(--text-faint)] mb-3">03</p>
+        <p class="font-display font-semibold mb-2">Abres las inscripciones</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Participantes, clubes y árbitros acceden a la plataforma en vivo.</p>
+      </div>
+      <div class="border-t-2 border-[var(--border)] pt-5">
+        <p class="font-mono text-sm text-[var(--text-faint)] mb-3">04</p>
+        <p class="font-display font-semibold mb-2">Organiza tu próximo torneo</p>
+        <p class="text-sm text-[var(--text-faint)] leading-relaxed">Crea tu próximo torneo desde la misma página, cuando lo necesites.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== CTA =================== -->
+<section id="cta" class="relative border-t hairline py-28 lg:py-36 overflow-hidden" style="background:#0a0a0b;">
+  <div class="absolute inset-0">
+    <img src="assets/img-2.jpg" alt="Campeonato de karate" class="w-full h-full object-cover opacity-25">
+    <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(10,10,11,.75) 0%,rgba(10,10,11,.55) 50%,rgba(10,10,11,.85) 100%);"></div>
+    <div class="absolute inset-0 tatami-grid opacity-30"></div>
+    <div class="absolute inset-0 noise-fade"></div>
+  </div>
+  <div class="max-w-3xl mx-auto px-6 text-center relative reveal">
+    <h2 class="font-display text-[34px] sm:text-[48px] font-semibold leading-tight mb-6">¿Preparando tu próximo torneo?</h2>
+    <p class="text-[var(--text-dim)] text-lg leading-relaxed mb-10 max-w-xl mx-auto">Hablemos sobre cómo tu equipo puede organizar todos sus torneos de karate desde una sola plataforma.</p>
+    <div class="flex flex-wrap justify-center gap-4">
+      <button type="button" class="open-demo-modal btn-primary px-8 py-3.5 text-sm font-medium">Solicitar una demo</button>
+      <a href="https://wa.link/db31wn" target="_blank" rel="noopener" class="btn-ghost px-8 py-3.5 text-sm font-medium">Hablar con nosotros</a>
+    </div>
+  </div>
+</section>
+
+<!-- =================== FAQ =================== -->
+<section class="bg-[var(--bg-soft)] border-t hairline py-24 lg:py-32">
+  <div class="max-w-3xl mx-auto px-6 lg:px-10">
+    <p class="font-mono text-[11px] uppercase tracking-widest text-[var(--accent-2)] mb-4 reveal">Preguntas frecuentes</p>
+    <h2 class="font-display text-[30px] sm:text-[38px] font-semibold leading-tight mb-12 reveal">Todo lo que necesitas saber.</h2>
+
+    <div class="divide-y hairline border-t border-b hairline reveal reveal-delay-1" id="faq-list">
+      <div class="faq-item py-5">
+        <button class="faq-toggle w-full flex items-center justify-between text-left gap-6">
+          <span class="font-display font-medium text-base sm:text-lg">¿Puedo gestionar más de un torneo desde la misma página?</span>
+          <span class="faq-icon font-display text-xl text-[var(--text-faint)] transition-transform duration-300 shrink-0">+</span>
+        </button>
+        <div class="faq-panel">
+          <p class="text-[var(--text-dim)] text-sm leading-relaxed pt-3 max-w-xl">Sí, puedes crear y administrar todos los torneos que organice tu equipo desde la misma página, cada uno con su propia configuración.</p>
+        </div>
+      </div>
+      <div class="faq-item py-5">
+        <button class="faq-toggle w-full flex items-center justify-between text-left gap-6">
+          <span class="font-display font-medium text-base sm:text-lg">¿La plataforma puede adaptarse a mis torneos?</span>
+          <span class="faq-icon font-display text-xl text-[var(--text-faint)] transition-transform duration-300 shrink-0">+</span>
+        </button>
+        <div class="faq-panel">
+          <p class="text-[var(--text-dim)] text-sm leading-relaxed pt-3 max-w-xl">Sí. Cada torneo que crees se configura según su propio formato, categorías y volumen de participantes, sea un campeonato nacional o una copa local.</p>
+        </div>
+      </div>
+      <div class="faq-item py-5">
+        <button class="faq-toggle w-full flex items-center justify-between text-left gap-6">
+          <span class="font-display font-medium text-base sm:text-lg">¿Puedo personalizar los colores y el diseño?</span>
+          <span class="faq-icon font-display text-xl text-[var(--text-faint)] transition-transform duration-300 shrink-0">+</span>
+        </button>
+        <div class="faq-panel">
+          <p class="text-[var(--text-dim)] text-sm leading-relaxed pt-3 max-w-xl">Cada torneo puede tener su propio logo, paleta de colores, banner y, opcionalmente, dominio propio.</p>
+        </div>
+      </div>
+      <div class="faq-item py-5">
+        <button class="faq-toggle w-full flex items-center justify-between text-left gap-6">
+          <span class="font-display font-medium text-base sm:text-lg">¿Puedo gestionar inscripciones?</span>
+          <span class="faq-icon font-display text-xl text-[var(--text-faint)] transition-transform duration-300 shrink-0">+</span>
+        </button>
+        <div class="faq-panel">
+          <p class="text-[var(--text-dim)] text-sm leading-relaxed pt-3 max-w-xl">Sí, con un formulario de registro, validación de datos y un panel para revisar y confirmar cada inscripción.</p>
+        </div>
+      </div>
+      <div class="faq-item py-5">
+        <button class="faq-toggle w-full flex items-center justify-between text-left gap-6">
+          <span class="font-display font-medium text-base sm:text-lg">¿Puedo mostrar las llaves de competición?</span>
+          <span class="faq-icon font-display text-xl text-[var(--text-faint)] transition-transform duration-300 shrink-0">+</span>
+        </button>
+        <div class="faq-panel">
+          <p class="text-[var(--text-dim)] text-sm leading-relaxed pt-3 max-w-xl">Sí, las llaves se generan automáticamente y se actualizan en vivo durante el torneo.</p>
+        </div>
+      </div>
+      <div class="faq-item py-5">
+        <button class="faq-toggle w-full flex items-center justify-between text-left gap-6">
+          <span class="font-display font-medium text-base sm:text-lg">¿Los participantes pueden consultar sus resultados?</span>
+          <span class="faq-icon font-display text-xl text-[var(--text-faint)] transition-transform duration-300 shrink-0">+</span>
+        </button>
+        <div class="faq-panel">
+          <p class="text-[var(--text-dim)] text-sm leading-relaxed pt-3 max-w-xl">Sí, cada competidor tiene acceso a su categoría, horario, próximo combate y resultados desde su teléfono.</p>
+        </div>
+      </div>
+      <div class="faq-item py-5">
+        <button class="faq-toggle w-full flex items-center justify-between text-left gap-6">
+          <span class="font-display font-medium text-base sm:text-lg">¿Puedo gestionar diferentes países y organizaciones?</span>
+          <span class="faq-icon font-display text-xl text-[var(--text-faint)] transition-transform duration-300 shrink-0">+</span>
+        </button>
+        <div class="faq-panel">
+          <p class="text-[var(--text-dim)] text-sm leading-relaxed pt-3 max-w-xl">Sí, la plataforma organiza participantes por país, club y federación, con vistas agregadas para tu equipo.</p>
+        </div>
+      </div>
+      <div class="faq-item py-5">
+        <button class="faq-toggle w-full flex items-center justify-between text-left gap-6">
+          <span class="font-display font-medium text-base sm:text-lg">¿Se puede utilizar desde teléfonos móviles?</span>
+          <span class="faq-icon font-display text-xl text-[var(--text-faint)] transition-transform duration-300 shrink-0">+</span>
+        </button>
+        <div class="faq-panel">
+          <p class="text-[var(--text-dim)] text-sm leading-relaxed pt-3 max-w-xl">Sí, tanto el panel administrativo como la vista de participantes están diseñados para funcionar en cualquier dispositivo.</p>
+        </div>
+      </div>
+      <div class="faq-item py-5">
+        <button class="faq-toggle w-full flex items-center justify-between text-left gap-6">
+          <span class="font-display font-medium text-base sm:text-lg">¿Cuánto tarda en estar lista mi página?</span>
+          <span class="faq-icon font-display text-xl text-[var(--text-faint)] transition-transform duration-300 shrink-0">+</span>
+        </button>
+        <div class="faq-panel">
+          <p class="text-[var(--text-dim)] text-sm leading-relaxed pt-3 max-w-xl">La entrega es rápida. Una vez lista tu página, puedes crear y configurar tu primer torneo el mismo día.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- =================== FOOTER =================== -->
+<footer id="contacto" class="bg-[var(--bg)] border-t hairline pt-20 pb-10">
+  <div class="max-w-7xl mx-auto px-6 lg:px-10">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+      <div class="lg:col-span-2">
+        <a href="#top" class="font-display font-semibold text-lg tracking-tight flex items-center gap-2.5 mb-4">
+          <span class="inline-flex w-9 h-9 rounded-md bg-white items-center justify-center p-1.5 shrink-0">
+            <img src="assets/img-1.png" alt="Kumitex" class="w-full h-full object-contain">
+          </span>
+          KUMITEX
+        </a>
+        <p class="text-[var(--text-faint)] text-sm leading-relaxed max-w-xs">Digital infrastructure for modern karate tournaments.</p>
+      </div>
+      <div>
+        <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-4">Navegación</p>
+        <div class="flex flex-col gap-2.5 text-sm text-[var(--text-dim)]">
+          <a href="#funcionalidades" class="link-underline w-fit hover:text-white transition-colors">Funcionalidades</a>
+          <a href="#proceso" class="link-underline w-fit hover:text-white transition-colors">Cómo funciona</a>
+        </div>
+      </div>
+      <div>
+        <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-4">Contacto</p>
+        <div class="flex flex-col gap-2.5 text-sm text-[var(--text-dim)]">
+          <a href="https://wa.link/db31wn" target="_blank" rel="noopener" class="link-underline w-fit hover:text-white transition-colors">WhatsApp</a>
+          <a href="https://www.instagram.com/kumitex.cl/" target="_blank" rel="noopener" class="link-underline w-fit hover:text-white transition-colors">Instagram</a>
+        </div>
+      </div>
+    </div>
+    <div class="border-t hairline pt-8 flex flex-col sm:flex-row justify-between gap-3 text-xs text-[var(--text-faint)] font-mono">
+      <button type="button" id="admin-trigger" class="text-left hover:text-white transition-colors cursor-default">© 2026 KUMITEX. Todos los derechos reservados.</button>
+      <span>Infraestructura digital para torneos de karate.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- =================== MODAL: SOLICITAR DEMO =================== -->
+<div id="demo-modal" class="fixed inset-0 z-50 hidden items-center justify-center px-4 py-8">
+  <div id="demo-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+
+  <div class="relative w-full max-w-lg bg-[var(--surface)] border hairline rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 sm:px-8 pt-6 pb-4 border-b hairline sticky top-0 bg-[var(--surface)]">
+      <div>
+        <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--accent-2)] mb-1">Solicitar demo</p>
+        <h3 class="font-display text-xl font-semibold">Cuéntanos sobre tu página</h3>
+      </div>
+      <button type="button" id="demo-modal-close" aria-label="Cerrar" class="w-8 h-8 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-white hover:bg-[var(--surface-2)] transition-colors">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <form id="demo-form" class="px-6 sm:px-8 py-6 flex flex-col gap-5">
+      <div>
+        <label for="demo-nombre" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Nombre *</label>
+        <input id="demo-nombre" name="nombre" type="text" required placeholder="Tu nombre" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
+      </div>
+
+      <div>
+        <label for="demo-telefono" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Teléfono *</label>
+        <input id="demo-telefono" name="telefono" type="tel" required placeholder="+56 9 1234 5678" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
+      </div>
+
+      <div>
+        <label for="demo-org" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Nombre de tu organización o club *</label>
+        <input id="demo-org" name="org" type="text" required placeholder="Ej: World Kyokushin Budokai" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
+      </div>
+
+      <div>
+        <label for="demo-colores" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Paleta de colores de la página</label>
+        <input id="demo-colores" name="colores" type="text" placeholder="Ej: rojo y negro, o los colores de tu club" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
+      </div>
+
+      <div>
+        <label class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Logo (opcional)</label>
+        <input id="demo-logo-input" name="logo" type="file" accept="image/*" class="hidden">
+        <label for="demo-logo-input" id="demo-logo-dropzone" class="flex items-center gap-3 border border-dashed hairline rounded-md px-3.5 py-3 text-sm text-[var(--text-faint)] cursor-pointer hover:border-[var(--accent-2)] transition-colors">
+          <img id="demo-logo-preview" class="hidden w-10 h-10 rounded-md object-cover border hairline" alt="Vista previa del logo">
+          <svg id="demo-logo-icon" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
+          <span id="demo-logo-label">Sube tu logo (PNG, JPG o SVG)</span>
+        </label>
+      </div>
+
+      <div>
+        <label for="demo-comentarios" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Comentarios adicionales</label>
+        <textarea id="demo-comentarios" name="comentarios" rows="3" placeholder="Referencias de páginas que te gusten, plazos, algo más que quieras contarnos..." class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors resize-none"></textarea>
+      </div>
+
+      <p id="demo-form-note" class="text-xs text-[var(--text-faint)] leading-relaxed">Tus datos quedan guardados de forma privada para que te contactemos.</p>
+
+      <button type="submit" class="btn-primary py-3 text-sm font-medium w-full">Enviar solicitud</button>
+    </form>
+
+    <div id="demo-form-success" class="hidden px-6 sm:px-8 py-10 text-center">
+      <div class="w-12 h-12 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-4">
+        <svg class="w-6 h-6 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <p class="font-display text-lg font-semibold mb-2">¡Solicitud enviada!</p>
+      <p class="text-sm text-[var(--text-faint)] leading-relaxed">Recibimos tus datos. Te contactaremos pronto.</p>
+    </div>
+  </div>
+</div>
+
+<!-- =================== MODAL: ADMIN LOGIN =================== -->
+<div id="admin-login-modal" class="fixed inset-0 z-50 hidden items-center justify-center px-4 py-8">
+  <div id="admin-login-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="relative w-full max-w-sm bg-[var(--surface)] border hairline rounded-xl shadow-2xl">
+    <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b hairline">
+      <h3 class="font-display text-lg font-semibold">Acceso admin</h3>
+      <button type="button" id="admin-login-close" aria-label="Cerrar" class="w-8 h-8 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-white hover:bg-[var(--surface-2)] transition-colors">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <form id="admin-login-form" class="px-6 py-6 flex flex-col gap-4">
+      <div>
+        <label for="admin-password" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Clave</label>
+        <input id="admin-password" type="password" required placeholder="••••••••" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
+      </div>
+      <p id="admin-login-error" class="hidden text-xs text-[var(--accent-2)]">Clave incorrecta.</p>
+      <button type="submit" class="btn-primary py-3 text-sm font-medium w-full">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- =================== MODAL: ADMIN PANEL =================== -->
+<div id="admin-panel-modal" class="fixed inset-0 z-50 hidden items-center justify-center px-4 py-8">
+  <div id="admin-panel-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="relative w-full max-w-3xl bg-[var(--surface)] border hairline rounded-xl shadow-2xl max-h-[88vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 sm:px-8 pt-6 pb-4 border-b hairline sticky top-0 bg-[var(--surface)] z-10">
+      <div>
+        <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--accent-2)] mb-1">Admin</p>
+        <h3 class="font-display text-xl font-semibold">Solicitudes de demo</h3>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" id="admin-clear-all" class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] hover:text-[var(--accent-2)] transition-colors px-2">Borrar todo</button>
+        <button type="button" id="admin-panel-close" aria-label="Cerrar" class="w-8 h-8 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-white hover:bg-[var(--surface-2)] transition-colors">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="admin-panel-list" class="px-6 sm:px-8 py-6 flex flex-col gap-4">
+      <!-- filled by JS -->
+    </div>
+    <p id="admin-panel-empty" class="hidden px-6 sm:px-8 pb-10 text-sm text-[var(--text-faint)]">Todavía no hay solicitudes enviadas desde este navegador.</p>
+    <p class="px-6 sm:px-8 pb-6 text-xs text-[var(--text-faint)] leading-relaxed border-t hairline pt-4">Las solicitudes de todos los visitantes se guardan en Supabase (tabla <span class="font-mono">kumitex_demo_requests</span>); aquí solo se muestran las enviadas desde este navegador. <a href="https://supabase.com/dashboard/project/rldtkomtclolhbmrphgh/editor" target="_blank" rel="noopener" class="underline hover:text-white transition-colors">Ver todas en Supabase →</a></p>
+  </div>
+</div>
+
+<script>
+  // Mobile menu
+  const menuBtn = document.getElementById('menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  let menuOpen = false;
+  menuBtn.addEventListener('click', () => {
+    menuOpen = !menuOpen;
+    if(menuOpen){
+      mobileMenu.classList.remove('translate-x-full','opacity-0','pointer-events-none');
+      mobileMenu.classList.add('translate-x-0','opacity-100');
+    } else {
+      mobileMenu.classList.add('translate-x-full','opacity-0','pointer-events-none');
+      mobileMenu.classList.remove('translate-x-0','opacity-100');
+    }
+  });
+  document.querySelectorAll('.mobile-link').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      menuOpen = false;
+      mobileMenu.classList.add('translate-x-full','opacity-0','pointer-events-none');
+      mobileMenu.classList.remove('translate-x-0','opacity-100');
+    });
+  });
+
+  // Scroll reveal
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        entry.target.classList.add('is-visible');
+        io.unobserve(entry.target);
+      }
+    });
+  },{threshold:0.15});
+  revealEls.forEach(el=>io.observe(el));
+
+  // Count-up stats
+  const statBlocks = document.querySelectorAll('.stat-block');
+  const statIo = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        const el = entry.target;
+        const target = parseInt(el.dataset.count,10);
+        const valEl = el.querySelector('.stat-val');
+        let start = 0;
+        const duration = 1400;
+        const startTime = performance.now();
+        function tick(now){
+          const progress = Math.min((now-startTime)/duration,1);
+          const eased = 1 - Math.pow(1-progress,3);
+          const current = Math.floor(eased*target);
+          valEl.textContent = current.toLocaleString('es-CL');
+          if(progress<1){ requestAnimationFrame(tick); } else { valEl.textContent = target.toLocaleString('es-CL'); }
+        }
+        requestAnimationFrame(tick);
+        statIo.unobserve(el);
+      }
+    });
+  },{threshold:0.4});
+  statBlocks.forEach(el=>statIo.observe(el));
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-item').forEach(item=>{
+    const toggle = item.querySelector('.faq-toggle');
+    toggle.addEventListener('click', ()=>{
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(o=>o.classList.remove('open'));
+      if(!isOpen){ item.classList.add('open'); }
+    });
+  });
+
+  // Demo modal
+  const demoModal = document.getElementById('demo-modal');
+  const demoForm = document.getElementById('demo-form');
+  const demoFormSuccess = document.getElementById('demo-form-success');
+  const demoModalClose = document.getElementById('demo-modal-close');
+  const demoModalBackdrop = document.getElementById('demo-modal-backdrop');
+  const demoLogoInput = document.getElementById('demo-logo-input');
+  const demoLogoPreview = document.getElementById('demo-logo-preview');
+  const demoLogoIcon = document.getElementById('demo-logo-icon');
+  const demoLogoLabel = document.getElementById('demo-logo-label');
+  const STORAGE_KEY = 'kumitex_demo_requests';
+
+  // Supabase: las solicitudes de demo se guardan en la tabla kumitex_demo_requests.
+  // La clave publishable es pública por diseño; la lectura está bloqueada por RLS.
+  const SUPABASE_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function openDemoModal(){
+    demoForm.classList.remove('hidden');
+    demoFormSuccess.classList.add('hidden');
+    demoModal.classList.remove('hidden');
+    demoModal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDemoModal(){
+    demoModal.classList.add('hidden');
+    demoModal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('.open-demo-modal').forEach(btn=>{
+    btn.addEventListener('click', openDemoModal);
+  });
+  demoModalClose.addEventListener('click', closeDemoModal);
+  demoModalBackdrop.addEventListener('click', closeDemoModal);
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape'){
+      if(!demoModal.classList.contains('hidden')) closeDemoModal();
+      if(!adminLoginModal.classList.contains('hidden')) closeAdminLogin();
+      if(!adminPanelModal.classList.contains('hidden')) closeAdminPanel();
+    }
+  });
+
+  demoLogoInput.addEventListener('change', ()=>{
+    const file = demoLogoInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      demoLogoPreview.src = e.target.result;
+      demoLogoPreview.classList.remove('hidden');
+      demoLogoIcon.classList.add('hidden');
+      demoLogoLabel.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function readRequests(){
+    try{
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    }catch(err){ return []; }
+  }
+  function saveRequests(list){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  demoForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const logoFile = demoLogoInput.files[0];
+
+    async function finishSubmit(logoDataUrl, logoName){
+      const entry = {
+        nombre: document.getElementById('demo-nombre').value.trim(),
+        telefono: document.getElementById('demo-telefono').value.trim(),
+        org: document.getElementById('demo-org').value.trim(),
+        colores: document.getElementById('demo-colores').value.trim(),
+        comentarios: document.getElementById('demo-comentarios').value.trim(),
+        logoDataUrl: logoDataUrl || null,
+        logoName: logoName || null,
+        fecha: new Date().toISOString()
+      };
+
+      const submitBtn = demoForm.querySelector('button[type="submit"]');
+      const note = document.getElementById('demo-form-note');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando…';
+
+      const { error } = await sb.from('kumitex_demo_requests').insert({
+        nombre: entry.nombre,
+        telefono: entry.telefono,
+        organizacion: entry.org,
+        colores: entry.colores || null,
+        comentarios: entry.comentarios || null,
+        logo_data_url: entry.logoDataUrl,
+        logo_name: entry.logoName
+      });
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar solicitud';
+
+      if(error){
+        note.textContent = 'No pudimos enviar tu solicitud. Revisa tu conexión e inténtalo de nuevo.';
+        note.style.color = 'var(--accent-2)';
+        return;
+      }
+
+      // Copia local para el panel admin de este navegador
+      const list = readRequests();
+      list.unshift(entry);
+      saveRequests(list);
+
+      demoForm.reset();
+      demoLogoPreview.classList.add('hidden');
+      demoLogoIcon.classList.remove('hidden');
+      demoLogoLabel.textContent = 'Sube tu logo (PNG, JPG o SVG)';
+      demoForm.classList.add('hidden');
+      demoFormSuccess.classList.remove('hidden');
+      setTimeout(closeDemoModal, 1800);
+    }
+
+    if(logoFile){
+      const reader = new FileReader();
+      reader.onload = (e)=> finishSubmit(e.target.result, logoFile.name);
+      reader.readAsDataURL(logoFile);
+    } else {
+      finishSubmit(null, null);
+    }
+  });
+
+  // Admin access
+  // Cambia esta clave por la que prefieras (no la dejes visible a otras personas).
+  const ADMIN_PASSWORD = 'kumitex-admin-2026';
+
+  const adminTrigger = document.getElementById('admin-trigger');
+  const adminLoginModal = document.getElementById('admin-login-modal');
+  const adminLoginForm = document.getElementById('admin-login-form');
+  const adminLoginClose = document.getElementById('admin-login-close');
+  const adminLoginBackdrop = document.getElementById('admin-login-backdrop');
+  const adminLoginError = document.getElementById('admin-login-error');
+  const adminPasswordInput = document.getElementById('admin-password');
+
+  const adminPanelModal = document.getElementById('admin-panel-modal');
+  const adminPanelClose = document.getElementById('admin-panel-close');
+  const adminPanelBackdrop = document.getElementById('admin-panel-backdrop');
+  const adminPanelList = document.getElementById('admin-panel-list');
+  const adminPanelEmpty = document.getElementById('admin-panel-empty');
+  const adminClearAll = document.getElementById('admin-clear-all');
+
+  function openAdminLogin(){
+    adminLoginError.classList.add('hidden');
+    adminLoginForm.reset();
+    adminLoginModal.classList.remove('hidden');
+    adminLoginModal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+    setTimeout(()=>adminPasswordInput.focus(), 50);
+  }
+  function closeAdminLogin(){
+    adminLoginModal.classList.add('hidden');
+    adminLoginModal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+  function openAdminPanel(){
+    renderAdminList();
+    adminPanelModal.classList.remove('hidden');
+    adminPanelModal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeAdminPanel(){
+    adminPanelModal.classList.add('hidden');
+    adminPanelModal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  adminTrigger.addEventListener('click', openAdminLogin);
+  adminLoginClose.addEventListener('click', closeAdminLogin);
+  adminLoginBackdrop.addEventListener('click', closeAdminLogin);
+  adminPanelClose.addEventListener('click', closeAdminPanel);
+  adminPanelBackdrop.addEventListener('click', closeAdminPanel);
+
+  adminLoginForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    if(adminPasswordInput.value === ADMIN_PASSWORD){
+      closeAdminLogin();
+      openAdminPanel();
+    } else {
+      adminLoginError.classList.remove('hidden');
+      adminPasswordInput.value = '';
+      adminPasswordInput.focus();
+    }
+  });
+
+  function formatFecha(iso){
+    try{
+      return new Date(iso).toLocaleString('es-CL', {dateStyle:'medium', timeStyle:'short'});
+    }catch(err){ return iso; }
+  }
+
+  function renderAdminList(){
+    const list = readRequests();
+    adminPanelList.innerHTML = '';
+    adminPanelEmpty.classList.toggle('hidden', list.length > 0);
+
+    list.forEach((entry, idx)=>{
+      const card = document.createElement('div');
+      card.className = 'border hairline rounded-lg p-5 bg-[var(--surface-2)]';
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div class="flex items-center gap-3">
+            ${entry.logoDataUrl ? `<img src="${entry.logoDataUrl}" alt="Logo" class="w-10 h-10 rounded-md object-cover border hairline">` : ''}
+            <div>
+              <p class="font-display font-semibold">${escapeHtml(entry.nombre)}</p>
+              <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-0.5">${formatFecha(entry.fecha)}</p>
+            </div>
+          </div>
+          <button type="button" data-idx="${idx}" class="admin-delete-btn font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] hover:text-[var(--accent-2)] transition-colors shrink-0">Eliminar</button>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-[var(--text-dim)]">
+          <p><span class="text-[var(--text-faint)]">Teléfono:</span> ${escapeHtml(entry.telefono)}</p>
+          <p><span class="text-[var(--text-faint)]">Organización:</span> ${escapeHtml(entry.org)}</p>
+          ${entry.colores ? `<p class="sm:col-span-2"><span class="text-[var(--text-faint)]">Colores:</span> ${escapeHtml(entry.colores)}</p>` : ''}
+          ${entry.comentarios ? `<p class="sm:col-span-2"><span class="text-[var(--text-faint)]">Comentarios:</span> ${escapeHtml(entry.comentarios)}</p>` : ''}
+        </div>
+      `;
+      adminPanelList.appendChild(card);
+    });
+
+    adminPanelList.querySelectorAll('.admin-delete-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const list = readRequests();
+        list.splice(parseInt(btn.dataset.idx, 10), 1);
+        saveRequests(list);
+        renderAdminList();
+      });
+    });
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  adminClearAll.addEventListener('click', ()=>{
+    if(confirm('¿Borrar todas las solicitudes guardadas en este navegador?')){
+      saveRequests([]);
+      renderAdminList();
+    }
+  });
+
+  const navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', ()=>{
+    if(window.scrollY>10){ navbar.style.borderBottomColor = 'var(--border)'; }
+  });
+</script>
+
+</body>
+</html>
