@@ -191,6 +191,15 @@
     <a href="https://supabase.com/dashboard/project/rldtkomtclolhbmrphgh/editor" target="_blank" rel="noopener" class="btn-ghost inline-flex w-fit px-5 py-2.5 text-sm rounded-md">Abrir tabla de solicitudes →</a>
   </section>
 
+  <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-4">
+    <p class="section-title">Respaldo</p>
+    <p class="text-sm text-[var(--text-dim)]">Descarga una copia completa de todos los datos (torneos, competidores, llaves, cuentas y configuración). Hazlo al menos una vez por semana y siempre antes de un torneo.</p>
+    <div class="flex items-center gap-4">
+      <button id="respaldo-btn" class="btn-primary px-5 py-2.5 text-sm rounded-md">Descargar respaldo (JSON)</button>
+      <span id="respaldo-status" class="text-sm"></span>
+    </div>
+  </section>
+
   <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-5">
     <p class="section-title">Cambiar contraseña</p>
     <form id="password-form" class="grid sm:grid-cols-2 gap-5">
@@ -419,6 +428,22 @@
     setTimeout(() => st.textContent = '', 2500);
     $('torneo-form').reset();
     loadTorneos();
+  });
+
+  // ═══ Respaldo completo ═══
+  $('respaldo-btn').addEventListener('click', async () => {
+    const st = $('respaldo-status');
+    st.textContent = 'Generando…'; st.style.color = 'var(--text-faint)';
+    const { data, error } = await sb.rpc('kumitex_respaldo', { p_master: SECRET });
+    if(error || !data?.ok){ st.textContent = 'Error al generar.'; st.style.color = 'var(--accent-2)'; return; }
+    const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `kumitex-respaldo-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    st.textContent = '✓ Descargado — guárdalo en un lugar seguro'; st.style.color = 'var(--ok)';
+    setTimeout(() => st.textContent = '', 4000);
   });
 
   // ═══ Cuentas de clientes ═══

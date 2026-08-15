@@ -368,6 +368,11 @@
     }
   });
 
+  // La primera carga trae todo (incluye logo y portada, que pesan);
+  // los refrescos automáticos solo traen lo que cambia durante el torneo,
+  // para no agotar el ancho de banda con muchos espectadores conectados.
+  let T_CACHE = null;
+
   async function load(){
     if(!SLUG){ $('not-found').style.display = 'block'; return; }
 
@@ -381,8 +386,17 @@
       }
     }
 
-    const { data: t } = await sb.from('kumitex_torneos').select('*').eq('slug', SLUG).single();
-    if(!t){ $('not-found').style.display = 'block'; return; }
+    if(!T_CACHE){
+      const { data: t } = await sb.from('kumitex_torneos').select('*').eq('slug', SLUG).single();
+      if(!t){ $('not-found').style.display = 'block'; return; }
+      T_CACHE = t;
+    } else {
+      const { data: t } = await sb.from('kumitex_torneos')
+        .select('id, nombre, organizacion, fecha, lugar, estado, publicado, color_acento')
+        .eq('slug', SLUG).single();
+      if(t) T_CACHE = { ...T_CACHE, ...t };
+    }
+    const t = T_CACHE;
     if(!t.publicado && !PRUEBA_OK){
       $('np-nombre').textContent = `"${t.nombre}" aún no está publicado`;
       $('not-public').style.display = 'block';
@@ -390,9 +404,9 @@
     }
 
     const [{ data: comps }, { data: cats }, { data: inscs }] = await Promise.all([
-      sb.from('kumitex_competidores').select('*').eq('torneo_id', t.id),
+      sb.from('kumitex_competidores').select('id, torneo_id, nombre, organizacion, pais').eq('torneo_id', t.id),
       sb.from('kumitex_categorias').select('*').eq('torneo_id', t.id).order('orden').order('created_at'),
-      sb.from('kumitex_inscripciones').select('*').eq('torneo_id', t.id)
+      sb.from('kumitex_inscripciones').select('id, torneo_id, competidor_id, categoria_id').eq('torneo_id', t.id)
     ]);
     render(t, comps || [], cats || [], inscs || []);
   }
@@ -639,7 +653,7 @@
   $('buscar').addEventListener('input', aplicarBusqueda);
 
   load();
-  setInterval(load, 20000); // refresco automático cada 20s
+  setInterval(load, 30000); // refresco automático (solo datos livianos tras la primera carga)
 </script>
 
 </body>
