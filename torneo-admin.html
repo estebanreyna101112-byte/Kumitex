@@ -194,6 +194,11 @@
     letter-spacing:.12em;color:var(--text-faint);text-align:center;
   }
   .br-match{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface-2);}
+  .br-num{
+    font-family:'JetBrains Mono',monospace;font-size:8.5px;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--accent-2);background:var(--accent-soft);
+    padding:3px 10px;border-bottom:1px solid var(--border);
+  }
   .br-slot{
     display:flex;align-items:center;justify-content:space-between;gap:8px;
     padding:8px 11px;font-size:13px;border-bottom:1px solid var(--border);cursor:pointer;
@@ -408,6 +413,7 @@
 
       <div class="card">
         <h2>Tus categorías</h2>
+        <div class="search"><input id="cat-search" type="text" placeholder="Buscar categoría por nombre o tipo…"></div>
         <div id="cat-list"></div>
         <p id="cat-empty" style="display:none;color:var(--text-faint);font-size:13px;">Aún no hay categorías creadas.</p>
       </div>
@@ -427,7 +433,7 @@
             <select id="tat-num" style="width:120px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:#fff;outline:none;"></select>
           </div>
           <button class="btn btn-ghost" id="tat-auto">Repartir sin asignar automáticamente</button>
-          <a class="btn btn-primary" id="tat-print" target="_blank" rel="noopener">🖨 Documento del torneo (PDF)</a>
+          <a class="btn btn-primary" id="tat-print" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 8V3.5h10V8M7 17H4.5a1 1 0 0 1-1-1v-6a1.5 1.5 0 0 1 1.5-1.5h14A1.5 1.5 0 0 1 20.5 10v6a1 1 0 0 1-1 1H17"/><rect x="7" y="14" width="10" height="6.5" rx="1"/></svg> Documento del torneo (PDF)</a>
           <span class="msg" id="tat-msg"></span>
         </div>
       </div>
@@ -458,6 +464,16 @@
           <div class="field"><label>Color de acento</label><input id="a-color" type="color" style="height:42px;padding:4px;"></div>
           <div class="field"><label>Página pública</label>
             <select id="a-publicado"><option value="false">Oculta</option><option value="true">Publicada</option></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Imagen de portada (fondo del encabezado de tu página pública)</label>
+          <input id="a-portada-input" type="file" accept="image/*" style="display:none;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <img id="a-portada-prev" alt="" style="display:none;width:120px;height:56px;border-radius:8px;object-fit:cover;border:1px solid var(--border);">
+            <label for="a-portada-input" class="btn btn-ghost btn-sm" style="cursor:pointer;">Subir imagen</label>
+            <button type="button" class="btn btn-danger btn-sm" id="a-portada-quitar" style="display:none;">Quitar</button>
+            <span style="font-size:11px;color:var(--text-faint);">Una foto de tu dojo o torneo anterior queda increíble. Se ajusta sola.</span>
           </div>
         </div>
         <div class="field">
@@ -693,6 +709,7 @@
   }
 
   $('comp-search').addEventListener('input', renderComps);
+  $('cat-search').addEventListener('input', renderCats);
 
   function resetCompForm(){
     $('comp-form').reset();
@@ -738,7 +755,9 @@
   }
 
   function renderCats(){
-    $('cat-list').innerHTML = CATS.map(k => {
+    const qc = ($('cat-search').value || '').toLowerCase();
+    const catsVisibles = CATS.filter(k => !qc || (k.nombre + ' ' + k.tipo).toLowerCase().includes(qc));
+    $('cat-list').innerHTML = catsVisibles.map(k => {
       const n = compsDe(k.id).length;
       return `
       <div class="cat-card" data-id="${k.id}">
@@ -813,6 +832,41 @@
     return c ? [c.organizacion, c.pais].filter(Boolean).join(' · ') : '';
   }
 
+  // Medallas con símbolo propio (sin emojis)
+  function medalSVG(lugar){
+    const c = { 1: ['#e8b33a', '#8a6414'], 2: ['#c2c7d0', '#697077'], 3: ['#cd8348', '#7c4a22'] }[lugar];
+    if(!c) return '';
+    return `<svg viewBox="0 0 24 24" width="1.15em" height="1.15em" style="display:inline-block;vertical-align:-0.22em;">
+      <path d="M7 1.5h4.2L12.8 9l-4.1 1.6z" fill="${c[1]}" opacity=".9"/>
+      <path d="M17 1.5h-4.2L11.2 9l4.1 1.6z" fill="${c[1]}" opacity=".55"/>
+      <circle cx="12" cy="15.3" r="6.4" fill="${c[0]}" stroke="${c[1]}" stroke-width="1.3"/>
+      <text x="12" y="18.4" text-anchor="middle" font-size="8.6" font-weight="700" font-family="Inter,system-ui,sans-serif" fill="${c[1]}">${lugar}</text>
+    </svg>`;
+  }
+
+  // Numeración corrida de combates por tatami (solo peleas reales, sin BYEs)
+  function numerosCombates(catId){
+    const k0 = CATS.find(x => x.id === catId);
+    if(!k0 || !k0.tatami) return null;
+    const col = CATS.filter(x => x.tatami === k0.tatami && x.tipo === 'kumite')
+      .sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    let n = 0;
+    const mapa = {};
+    col.forEach(k => {
+      const L = k.llave;
+      if(!L || L.armado || !Array.isArray(L.rondas)) return;
+      L.rondas.forEach((ronda, r) => {
+        ronda.forEach((m, i) => {
+          const bye = (r === 0 && (!m.a || !m.b)) || (r > 0 && (2 * i + 1 >= L.rondas[r - 1].length));
+          if(bye) return;
+          n++;
+          mapa[k.id + ':' + r + ':' + i] = n;
+        });
+      });
+    });
+    return mapa;
+  }
+
   function openKata(id){
     KATA_ID = id;
     SWAP_MODE = false;
@@ -874,11 +928,10 @@
 
     // Podio (si está finalizada)
     if(L.finalizada && L.podio?.length){
-      const medallas = ['🥇','🥈','🥉'];
       html += `<div class="podio-box">
         ${L.podio.map(p => `
           <div class="podio-line">
-            <span class="medal">${medallas[p.lugar - 1] || p.lugar + '°'}</span>
+            <span class="medal">${medalSVG(p.lugar) || p.lugar + '°'}</span>
             <span>${esc(compNombre(p.cid))}</span>
             <span class="pp">${p.p ?? '—'} pts</span>
           </div>`).join('')}
@@ -988,24 +1041,24 @@
     return a;
   }
 
-  // Orden clásico de siembra: para size=8 → [1,8,4,5,2,7,3,6];
-  // los BYEs (siembras > n) quedan repartidos por toda la llave
-  function genSeeds(size){
-    let arr = [1];
-    while(arr.length < size){
-      const m = arr.length * 2 + 1;
-      const next = [];
-      arr.forEach(s => next.push(s, m - s));
-      arr = next;
-    }
-    return arr;
+  // El combate j de la ronda r no tiene rival estructural (pasa directo)
+  // cuando su casilla b no recibe ganador de ningún combate anterior
+  function byeEstructural(L, r, j){
+    return r > 0 && (2 * j + 1 >= L.rondas[r - 1].length);
+  }
+  function esByeMatch(L, r, i){
+    const m = L.rondas[r][i];
+    return (r === 0 && esBye(m)) || byeEstructural(L, r, i);
   }
 
   function propagar(L, r, i, cid){
     L.rondas[r][i].g = cid;
     if(r + 1 < L.rondas.length){
-      const t = L.rondas[r + 1][Math.floor(i / 2)];
+      const j = Math.floor(i / 2);
+      const t = L.rondas[r + 1][j];
       if(i % 2 === 0) t.a = cid; else t.b = cid;
+      // si ese combate es un pase directo, avanza de inmediato
+      if(byeEstructural(L, r + 1, j) && t.a) propagar(L, r + 1, j, t.a);
     }
   }
 
@@ -1028,46 +1081,41 @@
     });
   }
 
-  function generarLlave(cat){
-    const ids = shuffle(compsDe(cat.id).map(c => c.id));
-    const n = ids.length;
-    let size = 2;
-    while(size < n) size *= 2;
-    const seeds = genSeeds(size);
-    const slots = new Array(size).fill(null);
-    seeds.forEach((seed, pos) => { if(seed <= n) slots[pos] = ids[seed - 1]; });
-
+  // Cascada natural: TODOS pelean en la primera ronda (12 inscritos = 6
+  // peleas); solo con número impar alguien pasa directo. Cada ronda
+  // siguiente se reduce a la mitad (con pase directo si queda impar).
+  function estructuraCascada(n){
     const rondas = [];
-    const r1 = [];
-    for(let i = 0; i < size; i += 2) r1.push({ a: slots[i], b: slots[i + 1], g: null });
-    rondas.push(r1);
-    for(let m = size / 4; m >= 1; m = m / 2){
+    let m = Math.max(1, Math.ceil(n / 2));
+    rondas.push(Array.from({ length: m }, () => ({ a: null, b: null, g: null })));
+    while(m > 1){
+      m = Math.ceil(m / 2);
       rondas.push(Array.from({ length: m }, () => ({ a: null, b: null, g: null })));
     }
-    const L = { modo: 'kumite', size, rondas, finalizada: false, podio: [] };
+    return rondas;
+  }
+
+  function generarLlave(cat){
+    const ids = shuffle(compsDe(cat.id).map(c => c.id));
+    const rondas = estructuraCascada(ids.length);
+    ids.forEach((cid, i) => {
+      const m = rondas[0][Math.floor(i / 2)];
+      if(i % 2 === 0) m.a = cid; else m.b = cid;
+    });
+    const L = { modo: 'kumite', rondas, finalizada: false, podio: [] };
     autoByes(L);
     return L;
   }
 
   // Estructura vacía para el armado manual (arrastrar competidores)
   function generarLlaveVacia(cat){
-    const n = compsDe(cat.id).length;
-    let size = 2;
-    while(size < n) size *= 2;
-    const rondas = [];
-    const r1 = [];
-    for(let i = 0; i < size; i += 2) r1.push({ a: null, b: null, g: null });
-    rondas.push(r1);
-    for(let m = size / 4; m >= 1; m = m / 2){
-      rondas.push(Array.from({ length: m }, () => ({ a: null, b: null, g: null })));
-    }
-    return { modo: 'kumite', size, rondas, finalizada: false, podio: [], armado: true };
+    return { modo: 'kumite', rondas: estructuraCascada(compsDe(cat.id).length), finalizada: false, podio: [], armado: true };
   }
 
-  function nombreRonda(i, total){
+  function nombreRonda(i, total, matches){
     if(i === total - 1) return 'Final';
     if(i === total - 2) return 'Semifinales';
-    if(i === total - 3) return 'Cuartos de final';
+    if(matches === 4) return 'Cuartos de final';
     return `Ronda ${i + 1}`;
   }
 
@@ -1129,15 +1177,14 @@
 
     let html = '';
     if(faltantes > 0){
-      html += `<p class="br-warn">⚠ Hay ${faltantes} inscrito(s) que no están en la llave. Regenera el sorteo para incluirlos.</p>`;
+      html += `<p class="br-warn"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-0.12em;"><path d="M12 3.5 21.5 20h-19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.1"/></svg> Hay ${faltantes} inscrito(s) que no están en la llave. Regenera el sorteo para incluirlos.</p>`;
     }
 
     if(L.finalizada && L.podio?.length){
-      const medallas = { 1: '🥇', 2: '🥈', 3: '🥉' };
       html += `<div class="podio-box">
         ${L.podio.map(p => `
           <div class="podio-line">
-            <span class="medal">${medallas[p.lugar] || ''}</span>
+            <span class="medal">${medalSVG(p.lugar)}</span>
             <span>${esc(compNombre(p.cid))}</span>
           </div>`).join('')}
       </div>`;
@@ -1149,13 +1196,15 @@
         : '<p class="br-hint">Toca un competidor para marcarlo como ganador del combate; tócalo de nuevo para deshacer.</p>';
     }
 
+    const NUMS = numerosCombates(k.id);
     html += '<div class="br-scroll"><div class="br-wrap">';
     L.rondas.forEach((ronda, r) => {
-      html += `<div class="br-col"><div class="br-col-title">${nombreRonda(r, total)}</div><div class="br-col-inner">`;
+      html += `<div class="br-col"><div class="br-col-title">${nombreRonda(r, total, ronda.length)}</div><div class="br-col-inner">`;
       ronda.forEach((m, i) => {
         // La llave se ajusta a los competidores: los BYE de primera ronda no se
         // dibujan (salvo en modo intercambio, donde sus casillas son destino válido)
         if(r === 0 && !SWAP_MODE && (esBye(m) || (!m.a && !m.b))) return;
+        const esPase = byeEstructural(L, r, i);
         const slot = (cid, lado) => {
           if(!cid){
             if(SWAP_MODE && r === 0){
@@ -1163,7 +1212,7 @@
               return `<div class="br-slot empty ${swapSel ? 'sel-swap' : ''}" style="cursor:pointer;"
                 data-r="${r}" data-m="${i}" data-lado="${lado}">— libre (BYE)</div>`;
             }
-            const txt = r === 0 ? (esBye(m) ? 'BYE' : '—') : 'Por definir';
+            const txt = r === 0 ? (esBye(m) ? 'BYE' : '—') : (esPase && lado === 'b' ? 'Pasa directo' : 'Por definir');
             return `<div class="br-slot empty">${txt}</div>`;
           }
           const win = m.g === cid;
@@ -1174,7 +1223,8 @@
             <span class="bcheck">✓</span>
           </div>`;
         };
-        html += `<div class="br-match">${slot(m.a, 'a')}${slot(m.b, 'b')}</div>`;
+        const num = NUMS && NUMS[k.id + ':' + r + ':' + i];
+        html += `<div class="br-match">${num ? `<div class="br-num">Combate Nº ${num} · Tatami ${k.tatami}</div>` : ''}${slot(m.a, 'a')}${slot(m.b, 'b')}</div>`;
       });
       html += '</div></div>';
     });
@@ -1224,7 +1274,7 @@
             return;
           }
 
-          if(esBye(m)) return; // los BYE avanzan solos
+          if(esByeMatch(L, r, i)) return; // los pases directos avanzan solos
           if(m.g === cid){
             const tieneDespues = r + 1 < L.rondas.length && L.rondas[r + 1][Math.floor(i / 2)].g;
             if(tieneDespues && !confirm('Este resultado tiene combates posteriores marcados; se borrarán. ¿Continuar?')) return;
@@ -1544,7 +1594,40 @@
     $('a-logo-prev').style.display = tieneLogo ? 'block' : 'none';
     $('a-logo-quitar').style.display = tieneLogo ? 'inline-flex' : 'none';
     if(tieneLogo) $('a-logo-prev').src = TORNEO.logo_url;
+    const portada = TORNEO.config && TORNEO.config.portada;
+    $('a-portada-prev').style.display = portada ? 'block' : 'none';
+    $('a-portada-quitar').style.display = portada ? 'inline-flex' : 'none';
+    if(portada) $('a-portada-prev').src = portada;
   }
+
+  // ── Portada: se reduce a 1600px máx. y se guarda en la config ──
+  $('a-portada-input').addEventListener('change', () => {
+    const file = $('a-portada-input').files[0];
+    if(!file) return;
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e) => { img.src = e.target.result; };
+    img.onload = async () => {
+      const MAX = 1600;
+      const escala = Math.min(1, MAX / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * escala);
+      canvas.height = Math.round(img.height * escala);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      const r = await exec('torneo_update', { config: { portada: dataUrl } });
+      if(!r.ok){ alert('No se pudo guardar la imagen.'); return; }
+      $('a-portada-input').value = '';
+      await loadAll();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $('a-portada-quitar').addEventListener('click', async () => {
+    if(!confirm('¿Quitar la imagen de portada?')) return;
+    await exec('torneo_update', { config: { portada: null } });
+    await loadAll();
+  });
 
   // ── Logo: se reduce a 512px máx. y se guarda como data URL ──
   $('a-logo-input').addEventListener('change', () => {
@@ -1616,7 +1699,7 @@
   const TOUR_KEY = 'kumitex_tour_visto';
   let TOUR_I = -1;
   const TOUR_STEPS = [
-    { title: '¡Bienvenido a tu panel! 🥋',
+    { title: '¡Bienvenido a tu panel!',
       text: 'Aquí administras todo tu torneo: inscripciones, categorías, llaves y el programa del día. Te mostramos cómo en 1 minuto — puedes saltarlo cuando quieras.' },
     { tab: 'inscripciones', target: '#comp-form',
       title: '1 · Inscribe a tus competidores',
