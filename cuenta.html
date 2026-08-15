@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi cuenta — Kumitex</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --surface:#161719;
+    --surface-2:#1d1e21;
+    --border:#2a2b2f;
+    --text:#f5f4f2;
+    --text-dim:#a6a7ac;
+    --text-faint:#6d6e73;
+    --accent:#e2262e;
+    --accent-2:#ff4a52;
+    --accent-soft:rgba(226,38,46,.12);
+    --ok:#3ecf6e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;}
+  .font-display{font-family:'Space Grotesk',sans-serif;}
+  ::selection{background:var(--accent);color:#fff;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:820px;margin:0 auto;padding:0 20px;}
+
+  header.top{border-bottom:1px solid var(--border);}
+  .top-inner{height:64px;display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .brand img{width:32px;height:32px;object-fit:contain;}
+  .brand span{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;}
+  .top-link{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);transition:color .2s;background:none;border:none;cursor:pointer;}
+  .top-link:hover{color:#fff;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);margin-bottom:6px;}
+  .field input{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:12px 14px;font-size:16px;color:#fff;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s;
+  }
+  .field input::placeholder{color:var(--text-faint);}
+  .field input:focus{border-color:var(--accent-2);}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;
+    padding:12px 20px;font-size:14px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;border:none;
+    transition:background .2s, border-color .2s;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#c71e25;}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid rgba(245,244,242,.25);color:var(--text);}
+  .btn-ghost:hover{border-color:rgba(245,244,242,.6);}
+  .btn-sm{padding:7px 13px;font-size:12px;border-radius:6px;}
+  .msg{font-size:13px;min-height:18px;margin-top:8px;}
+  .msg.err{color:var(--accent-2);}
+  .msg.ok{color:var(--ok);}
+
+  /* ── Auth ── */
+  .auth-box{max-width:400px;margin:60px auto 90px;padding:0 20px;}
+  .auth-box h1{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;margin-bottom:6px;}
+  .auth-box .sub{font-size:14px;color:var(--text-faint);margin-bottom:26px;}
+  .auth-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:22px;}
+  .auth-tab{
+    background:none;border:none;cursor:pointer;color:var(--text-faint);
+    font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;
+    padding:11px 16px;border-bottom:2px solid transparent;transition:color .2s;
+  }
+  .auth-tab.active{color:var(--accent-2);border-bottom-color:var(--accent);}
+
+  /* ── Dashboard ── */
+  .dash{padding:36px 0 90px;}
+  .dash h1{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:600;margin-bottom:4px;}
+  .dash .sub{font-size:14px;color:var(--text-faint);margin-bottom:26px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px;}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin-bottom:12px;}
+
+  .t-item{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;margin-bottom:10px;
+  }
+  .t-item .nm{font-weight:600;font-size:15px;}
+  .t-item .meta{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-faint);margin-top:3px;}
+  .t-item .acts{display:flex;gap:8px;flex-wrap:wrap;}
+  .t-del{background:none;border:none;color:var(--text-faint);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:4px;}
+  .t-del:hover{color:var(--accent-2);}
+
+  /* Primera vez: guía */
+  .first{
+    text-align:center;border:1px dashed var(--border);border-radius:14px;
+    padding:44px 24px;margin-bottom:16px;
+  }
+  .first .big{font-size:40px;margin-bottom:12px;}
+  .first h2{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;margin-bottom:8px;}
+  .first p{color:var(--text-dim);font-size:14px;max-width:46ch;margin:0 auto 18px;}
+  .steps-mini{
+    display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-bottom:22px;
+    font-size:12px;color:var(--text-faint);
+  }
+  .steps-mini span{display:inline-flex;align-items:center;gap:7px;}
+  .steps-mini .n{
+    width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent-2);
+    display:inline-flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.svg" alt="Kumitex">
+      <span>KUMITEX</span>
+    </a>
+    <button class="top-link" id="logout-btn" style="display:none;">Cerrar sesión</button>
+  </div>
+</header>
+
+<!-- ════ AUTH ════ -->
+<div id="auth-view" class="auth-box" style="display:none;">
+  <h1>Tu cuenta Kumitex</h1>
+  <p class="sub">Administra todos tus torneos desde un solo lugar.</p>
+
+  <div class="auth-tabs">
+    <button class="auth-tab active" data-t="login">Iniciar sesión</button>
+    <button class="auth-tab" data-t="registro">Crear cuenta</button>
+  </div>
+
+  <form id="login-form">
+    <div class="field"><label for="l-email">Email</label>
+      <input id="l-email" type="email" required placeholder="tu@correo.com" autocomplete="email"></div>
+    <div class="field"><label for="l-pass">Contraseña</label>
+      <input id="l-pass" type="password" required autocomplete="current-password"></div>
+    <button type="submit" class="btn btn-primary" style="width:100%;" id="login-btn">Ingresar</button>
+    <p class="msg err" id="login-msg"></p>
+  </form>
+
+  <form id="reg-form" style="display:none;">
+    <div class="field"><label for="r-nombre">Tu nombre</label>
+      <input id="r-nombre" type="text" required placeholder="Nombre y apellido" autocomplete="name"></div>
+    <div class="field"><label for="r-org">Organización o club (opcional)</label>
+      <input id="r-org" type="text" placeholder="Ej: World Kyokushin Budokai"></div>
+    <div class="field"><label for="r-email">Email</label>
+      <input id="r-email" type="email" required placeholder="tu@correo.com" autocomplete="email"></div>
+    <div class="field"><label for="r-pass">Contraseña (mín. 8 caracteres)</label>
+      <input id="r-pass" type="password" required minlength="8" autocomplete="new-password"></div>
+    <button type="submit" class="btn btn-primary" style="width:100%;" id="reg-btn">Crear mi cuenta</button>
+    <p class="msg err" id="reg-msg"></p>
+  </form>
+</div>
+
+<!-- ════ DASHBOARD ════ -->
+<div id="dash-view" class="wrap dash" style="display:none;">
+  <h1 id="dash-hola">Hola</h1>
+  <p class="sub" id="dash-email"></p>
+
+  <div id="dash-first" class="first" style="display:none;">
+    <div class="big">🥋</div>
+    <h2>Crea tu primer torneo</h2>
+    <p>En segundos tendrás tu página pública y tu panel de administración para inscribir competidores, armar categorías, generar llaves y ordenar el día por tatamis.</p>
+    <div class="steps-mini">
+      <span><span class="n">1</span> Crea el torneo</span>
+      <span><span class="n">2</span> Inscribe y arma categorías</span>
+      <span><span class="n">3</span> Genera las llaves</span>
+      <span><span class="n">4</span> Publica</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="crear-titulo">Nuevo torneo</h2>
+    <form id="crear-form" style="display:flex;gap:10px;flex-wrap:wrap;">
+      <input id="t-nombre" type="text" required minlength="3" placeholder="Nombre del torneo — Ej: Copa Nacional 2026"
+        style="flex:1;min-width:220px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:16px;color:#fff;outline:none;font-family:'Inter',sans-serif;">
+      <button type="submit" class="btn btn-primary" id="crear-btn">Crear torneo</button>
+    </form>
+    <p class="msg" id="crear-msg"></p>
+  </div>
+
+  <div class="card" id="lista-card">
+    <h2>Mis torneos</h2>
+    <div id="t-lista"></div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  const TK = 'kumitex_cuenta_token';
+  let TOKEN = localStorage.getItem(TK);
+
+  const ESTADOS = { preparacion: 'En preparación', inscripciones: 'Inscripciones', en_curso: 'En curso', finalizado: 'Finalizado' };
+
+  function esc(s){
+    const d = document.createElement('div');
+    d.textContent = s ?? '';
+    return d.innerHTML;
+  }
+
+  // ═══ Tabs de auth ═══
+  document.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.auth-tab').forEach(x => x.classList.toggle('active', x === t));
+    $('login-form').style.display = t.dataset.t === 'login' ? 'block' : 'none';
+    $('reg-form').style.display = t.dataset.t === 'registro' ? 'block' : 'none';
+  }));
+
+  // ═══ Registro ═══
+  $('reg-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('reg-btn');
+    btn.disabled = true; btn.textContent = 'Creando…';
+    const { data, error } = await sb.rpc('kumitex_registrar', {
+      p_email: $('r-email').value.trim(),
+      p_password: $('r-pass').value,
+      p_nombre: $('r-nombre').value.trim(),
+      p_organizacion: $('r-org').value.trim() || null
+    });
+    btn.disabled = false; btn.textContent = 'Crear mi cuenta';
+    if(error || !data?.ok){
+      const e2 = data?.error;
+      $('reg-msg').textContent = e2 === 'email_ya_existe' ? 'Ese email ya tiene cuenta — inicia sesión.'
+        : e2 === 'email_invalido' ? 'Revisa el email.'
+        : e2 === 'clave_corta' ? 'La contraseña necesita mínimo 8 caracteres.'
+        : 'No se pudo crear la cuenta.';
+      return;
+    }
+    TOKEN = data.token;
+    localStorage.setItem(TK, TOKEN);
+    entrar();
+  });
+
+  // ═══ Login ═══
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('login-btn');
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    const { data, error } = await sb.rpc('kumitex_login', {
+      p_email: $('l-email').value.trim(),
+      p_password: $('l-pass').value
+    });
+    btn.disabled = false; btn.textContent = 'Ingresar';
+    if(error || !data?.ok){
+      $('login-msg').textContent = 'Email o contraseña incorrectos.';
+      return;
+    }
+    TOKEN = data.token;
+    localStorage.setItem(TK, TOKEN);
+    entrar();
+  });
+
+  $('logout-btn').addEventListener('click', async () => {
+    await sb.rpc('kumitex_cuenta_exec', { p_token: TOKEN, p_action: 'logout', p_payload: {} });
+    localStorage.removeItem(TK);
+    location.reload();
+  });
+
+  // ═══ Dashboard ═══
+  async function entrar(){
+    const { data, error } = await sb.rpc('kumitex_cuenta_exec', { p_token: TOKEN, p_action: 'perfil', p_payload: {} });
+    if(error || !data?.ok){
+      localStorage.removeItem(TK);
+      TOKEN = null;
+      $('auth-view').style.display = 'block';
+      $('dash-view').style.display = 'none';
+      $('logout-btn').style.display = 'none';
+      return;
+    }
+    $('auth-view').style.display = 'none';
+    $('dash-view').style.display = 'block';
+    $('logout-btn').style.display = 'inline';
+    const c = data.cuenta || {};
+    $('dash-hola').textContent = c.nombre ? `Hola, ${c.nombre.split(' ')[0]}` : 'Hola';
+    $('dash-email').textContent = [c.email, c.organizacion].filter(Boolean).join(' · ');
+    renderTorneos(data.torneos || []);
+  }
+
+  function abrirPanel(slug){
+    // el panel del torneo acepta el token del dueño: sesión lista sin segunda clave
+    sessionStorage.setItem('kumitex_t_' + slug, TOKEN);
+    window.open(`torneo-admin.html?t=${slug}`, '_blank');
+  }
+
+  function renderTorneos(ts){
+    const primerizo = ts.length === 0;
+    $('dash-first').style.display = primerizo ? 'block' : 'none';
+    $('lista-card').style.display = primerizo ? 'none' : 'block';
+    $('crear-titulo').textContent = primerizo ? '¿Cómo se llama tu torneo?' : 'Nuevo torneo';
+
+    $('t-lista').innerHTML = ts.map(t => `
+      <div class="t-item" data-slug="${t.slug}">
+        <div>
+          <div class="nm">${esc(t.nombre)}</div>
+          <div class="meta">${ESTADOS[t.estado] || t.estado} · ${t.publicado ? 'publicado' : 'oculto'} · ${t.inscritos} inscritos · ${t.categorias} categorías</div>
+        </div>
+        <div class="acts">
+          <button class="btn btn-sm btn-primary t-panel">Administrar</button>
+          <a class="btn btn-sm btn-ghost" href="torneo.html?t=${t.slug}" target="_blank" rel="noopener">Página pública ↗</a>
+          <button class="t-del">Eliminar</button>
+        </div>
+      </div>`).join('');
+
+    document.querySelectorAll('.t-item').forEach(el => {
+      const slug = el.dataset.slug;
+      el.querySelector('.t-panel').addEventListener('click', () => abrirPanel(slug));
+      el.querySelector('.t-del').addEventListener('click', async () => {
+        if(!confirm('¿Eliminar este torneo y TODOS sus datos (competidores, categorías, llaves)? No se puede deshacer.')) return;
+        await sb.rpc('kumitex_cuenta_exec', { p_token: TOKEN, p_action: 'torneo_eliminar', p_payload: { slug } });
+        entrar();
+      });
+    });
+  }
+
+  $('crear-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('crear-btn');
+    btn.disabled = true; btn.textContent = 'Creando…';
+    const { data, error } = await sb.rpc('kumitex_cuenta_exec', {
+      p_token: TOKEN, p_action: 'torneo_crear',
+      p_payload: { nombre: $('t-nombre').value.trim() }
+    });
+    btn.disabled = false; btn.textContent = 'Crear torneo';
+    const msg = $('crear-msg');
+    if(error || !data?.ok){
+      msg.textContent = 'No se pudo crear el torneo.'; msg.className = 'msg err';
+      return;
+    }
+    msg.textContent = '✓ Torneo creado — abriendo tu panel…'; msg.className = 'msg ok';
+    $('crear-form').reset();
+    await entrar();
+    setTimeout(() => { abrirPanel(data.slug); msg.textContent = ''; }, 700);
+  });
+
+  // ═══ Arranque ═══
+  if(TOKEN){ entrar(); }
+  else { $('auth-view').style.display = 'block'; }
+</script>
+
+</body>
+</html>
