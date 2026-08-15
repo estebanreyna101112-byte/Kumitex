@@ -419,8 +419,8 @@
 
     // ── Portada personalizada (imagen subida por el organizador) ──
     const portadaLayer = $('hero-portada');
-    if(t.config && t.config.portada){
-      portadaLayer.style.backgroundImage = `url(${t.config.portada})`;
+    if(t.config && t.config.portada && /^data:image\//.test(t.config.portada)){
+      portadaLayer.style.backgroundImage = `url("${t.config.portada.replace(/["\\)]/g, '')}")`;
       portadaLayer.style.display = 'block';
     } else {
       portadaLayer.style.display = 'none';

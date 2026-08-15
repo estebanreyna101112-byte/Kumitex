@@ -215,7 +215,7 @@
     const header = (subtitulo) => `
       <div class="hd">
         <div class="lft">
-          ${t.logo_url ? `<img src="${t.logo_url}" alt="">` : '<img src="assets/logo.svg" alt="">'}
+          ${t.logo_url && /^data:image\//.test(t.logo_url) ? `<img src="${t.logo_url.replace(/"/g, '')}" alt="">` : '<img src="assets/logo.svg" alt="">'}
           <div>
             <h1>${esc(t.nombre)}</h1>
             <div class="sub">${esc([t.organizacion, t.fecha, t.lugar].filter(Boolean).join(' · '))}</div>

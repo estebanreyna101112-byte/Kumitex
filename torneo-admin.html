@@ -599,17 +599,17 @@
 
   // ═══ Carga de datos ═══
   async function loadAll(){
-    const [t, c, k, i, g] = await Promise.all([
-      sb.from('kumitex_torneos').select('*').eq('slug', SLUG).single(),
-      sb.from('kumitex_competidores').select('*').order('created_at'),
-      sb.from('kumitex_categorias').select('*').order('orden').order('created_at'),
-      sb.from('kumitex_inscripciones').select('*'),
+    const { data: t } = await sb.from('kumitex_torneos').select('*').eq('slug', SLUG).single();
+    TORNEO = t;
+    const [c, k, i, g] = await Promise.all([
+      sb.from('kumitex_competidores').select('*').eq('torneo_id', TORNEO.id).order('created_at'),
+      sb.from('kumitex_categorias').select('*').eq('torneo_id', TORNEO.id).order('orden').order('created_at'),
+      sb.from('kumitex_inscripciones').select('*').eq('torneo_id', TORNEO.id),
       sb.from('kumitex_config').select('config').eq('id', 1).single()
     ]);
-    TORNEO = t.data;
-    COMPS = (c.data || []).filter(x => x.torneo_id === TORNEO.id);
-    CATS = (k.data || []).filter(x => x.torneo_id === TORNEO.id);
-    INSCS = (i.data || []).filter(x => x.torneo_id === TORNEO.id);
+    COMPS = c.data || [];
+    CATS = k.data || [];
+    INSCS = i.data || [];
     GCONFIG = g.data?.config || {};
     renderAll();
   }

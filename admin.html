@@ -216,6 +216,12 @@
   const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const $ = (id) => document.getElementById(id);
+  // Todo dato escrito por clientes se escapa antes de insertarlo en el DOM
+  function esc(s){
+    const d = document.createElement('div');
+    d.textContent = s ?? '';
+    return d.innerHTML;
+  }
 
   let SECRET = sessionStorage.getItem('kumitex_admin_secret') || null;
   let CONFIG = null;
@@ -355,7 +361,7 @@
       return `
       <div class="flex items-center justify-between gap-3 flex-wrap border hairline rounded-lg px-4 py-3 bg-[var(--surface-2)]" ${est === 'solicitado' ? 'style="border-color:rgba(226,38,46,.5);"' : ''}>
         <div>
-          <p class="font-semibold text-sm">${t.nombre} ${badge}</p>
+          <p class="font-semibold text-sm">${esc(t.nombre)} ${badge}</p>
           <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-0.5">${t.slug} · ${t.estado} · ${t.publicado ? 'publicado' : 'oculto'}${detalle}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
@@ -426,8 +432,8 @@
     list.innerHTML = data.cuentas.map(c => `
       <div class="flex items-center justify-between gap-3 flex-wrap border hairline rounded-lg px-4 py-3 bg-[var(--surface-2)]">
         <div>
-          <p class="font-semibold text-sm">${c.nombre || '(sin nombre)'} <span class="text-[var(--text-faint)] font-normal">· ${c.email}</span></p>
-          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-0.5">${c.organizacion || 'sin organización'} · ${c.torneos} torneo(s)</p>
+          <p class="font-semibold text-sm">${esc(c.nombre || '(sin nombre)')} <span class="text-[var(--text-faint)] font-normal">· ${esc(c.email)}</span></p>
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-0.5">${esc(c.organizacion || 'sin organización')} · ${c.torneos} torneo(s)</p>
         </div>
       </div>`).join('');
   }
