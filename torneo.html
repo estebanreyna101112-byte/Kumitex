@@ -145,6 +145,25 @@
   .ronda-pub .rl .av{font-size:11px;color:var(--ok);}
   .badge.draft{border-color:rgba(255,193,7,.4);color:#ffc107;}
 
+  /* ── Programa por tatami (público) ── */
+  .tat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start;margin-bottom:30px;}
+  .tat-col{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+  .tat-col h3{
+    font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--accent-2);margin-bottom:10px;
+  }
+  .tat-line{
+    display:flex;align-items:center;gap:8px;padding:8px 0;
+    border-bottom:1px solid var(--border);font-size:13.5px;
+  }
+  .tat-line:last-child{border-bottom:none;}
+  .tat-line .num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);width:16px;}
+  .tat-line .nm{flex:1;color:var(--text);}
+  .tat-line .st{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;}
+  .tat-line .st.fin{color:var(--ok);}
+  .tat-line .st.live{color:var(--accent-2);}
+  .tat-line .st.wait{color:var(--text-faint);}
+
   /* ── Llave de kumite (pública) ── */
   .br-scroll{overflow-x:auto;padding:4px 0 8px;}
   .br-wrap{display:flex;gap:14px;min-width:max-content;align-items:stretch;}
@@ -214,6 +233,11 @@
       <div class="stat"><div class="k">Categorías</div><div class="v" id="st-cat">0</div></div>
       <div class="stat"><div class="k">Clubes</div><div class="v" id="st-org">0</div></div>
       <div class="stat"><div class="k">Países</div><div class="v" id="st-pais">0</div></div>
+    </div>
+
+    <div id="tatami-sec" style="display:none;">
+      <h2 class="sec">Programa por tatami</h2>
+      <div id="tatami-grid" class="tat-grid"></div>
     </div>
 
     <h2 class="sec">Categorías</h2>
@@ -434,6 +458,33 @@
       </details>`;
     }).join('');
     $('cat-empty').style.display = pub.length ? 'none' : 'block';
+
+    // ── Programa por tatami ──
+    const conTatami = pub.filter(k => k.tatami);
+    if(conTatami.length){
+      const maxT = Math.max(...conTatami.map(k => k.tatami));
+      let th = '';
+      for(let n = 1; n <= maxT; n++){
+        const col = conTatami.filter(k => k.tatami === n).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+        if(!col.length) continue;
+        let liveMarcado = false;
+        th += `<div class="tat-col"><h3>Tatami ${n}</h3>` + col.map((k, i) => {
+          let st, cls;
+          if(k.llave?.finalizada){ st = '✓ Final'; cls = 'fin'; }
+          else if(!liveMarcado && t.estado === 'en_curso'){ st = '● En curso'; cls = 'live'; liveMarcado = true; }
+          else { st = t.estado === 'en_curso' ? 'En espera' : 'Programada'; cls = 'wait'; }
+          return `<div class="tat-line">
+            <span class="num">${i + 1}</span>
+            <span class="nm">${esc(k.nombre)}</span>
+            <span class="st ${cls}">${st}</span>
+          </div>`;
+        }).join('') + '</div>';
+      }
+      $('tatami-grid').innerHTML = th;
+      $('tatami-sec').style.display = 'block';
+    } else {
+      $('tatami-sec').style.display = 'none';
+    }
 
     if(PRUEBA_OK) $('prueba-bar').style.display = 'block';
     $('app').style.display = 'block';

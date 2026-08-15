@@ -203,6 +203,39 @@
   .br-warn{font-size:12px;color:#ffc107;margin-bottom:12px;}
   .swap-on{border-color:var(--accent) !important;color:var(--accent-2) !important;}
 
+  /* ── Tatamis ── */
+  .tat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;align-items:start;}
+  .tat-col{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+  .tat-col h3{
+    font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--accent-2);margin-bottom:12px;
+    display:flex;justify-content:space-between;align-items:baseline;
+  }
+  .tat-col h3 .tt{color:var(--text-faint);font-size:9px;}
+  .tat-item{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:10px 12px;margin-bottom:8px;
+  }
+  .tat-item .ti-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+  .tat-item .ti-nm{font-weight:600;font-size:13.5px;}
+  .tat-item .ti-meta{font-size:11px;color:var(--text-faint);margin-top:2px;}
+  .tat-item .ti-acts{display:flex;gap:4px;flex:0 0 auto;}
+  .tat-btn{
+    background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-faint);
+    width:26px;height:26px;font-size:13px;cursor:pointer;line-height:1;
+    display:inline-flex;align-items:center;justify-content:center;transition:color .15s, border-color .15s;
+  }
+  .tat-btn:hover{color:var(--accent-2);border-color:var(--accent);}
+  .tat-btn:disabled{opacity:.3;cursor:default;}
+  .tat-item select{
+    width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border);
+    border-radius:6px;color:#fff;padding:6px 8px;font-size:12px;
+  }
+  .tat-num-badge{
+    font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);margin-right:6px;
+  }
+  .tat-empty{font-size:12px;color:var(--text-faint);padding:6px 0;}
+
   /* ── Armado manual (arrastrar) ── */
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;padding:12px;border:1px dashed var(--border);border-radius:10px;min-height:46px;}
   .chip{
@@ -260,6 +293,7 @@
       <nav class="tabs">
         <button class="tab active" data-view="inscripciones">Inscripciones</button>
         <button class="tab" data-view="categorias">Categorías</button>
+        <button class="tab" data-view="tatamis">Tatamis</button>
         <button class="tab" data-view="ajustes">Ajustes</button>
       </nav>
     </div>
@@ -346,6 +380,26 @@
         <div id="cat-list"></div>
         <p id="cat-empty" style="display:none;color:var(--text-faint);font-size:13px;">Aún no hay categorías creadas.</p>
       </div>
+    </section>
+
+    <!-- ══ TATAMIS ══ -->
+    <section class="view" data-view="tatamis">
+      <div class="card">
+        <h2>Orden del torneo por tatami</h2>
+        <p style="font-size:13px;color:var(--text-faint);margin-bottom:14px;">
+          Asigna cada categoría a un tatami y ordénalas: ese será el programa del día.
+          El público lo ve en la página del torneo.
+        </p>
+        <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field" style="margin:0;">
+            <label for="tat-num">Número de tatamis</label>
+            <select id="tat-num" style="width:120px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:#fff;outline:none;"></select>
+          </div>
+          <button class="btn btn-ghost" id="tat-auto">Repartir sin asignar automáticamente</button>
+          <span class="msg" id="tat-msg"></span>
+        </div>
+      </div>
+      <div id="tat-cols" class="tat-grid"></div>
     </section>
 
     <!-- ══ AJUSTES ══ -->
@@ -479,6 +533,7 @@
     $('link-prueba').href = `torneo.html?t=${SLUG}&prueba=1`;
     renderComps();
     renderCats();
+    renderTatamis();
     renderAjustes();
   }
 
@@ -1258,6 +1313,132 @@
     }
     return [...final, ...resto].slice(0, 3).map((r, i) => ({ cid: r.cid, lugar: i + 1, p: r.p ?? null }));
   }
+
+  // ═══ Tatamis y orden del torneo ═══
+  function numTatamis(){
+    return (TORNEO.config && TORNEO.config.tatamis) || 2;
+  }
+
+  function estadoCat(k){
+    if(k.llave?.finalizada) return { txt: '✓ Finalizada', color: 'var(--ok)' };
+    if(k.llave && !k.llave.armado) return { txt: 'Llave lista', color: 'var(--text-dim)' };
+    return { txt: 'Sin llave', color: 'var(--text-faint)' };
+  }
+
+  async function guardarOrdenCol(n, arr){
+    for(let i = 0; i < arr.length; i++){
+      await exec('cat_update', { id: arr[i].id, tatami: String(n), orden: String(i + 1) });
+    }
+  }
+
+  function renderTatamis(){
+    const num = numTatamis();
+    const sel = $('tat-num');
+    sel.innerHTML = Array.from({ length: 8 }, (_, i) =>
+      `<option value="${i + 1}" ${i + 1 === num ? 'selected' : ''}>${i + 1}</option>`).join('');
+
+    const maxUsado = Math.max(num, ...CATS.map(k => k.tatami || 0));
+    const sinAsignar = CATS.filter(k => !k.tatami);
+    const cols = $('tat-cols');
+    let html = '';
+
+    // Columna: sin asignar
+    html += `<div class="tat-col"><h3>Sin asignar <span class="tt">${sinAsignar.length}</span></h3>`;
+    html += sinAsignar.length ? sinAsignar.map(k => `
+      <div class="tat-item">
+        <div class="ti-nm">${esc(k.nombre)}</div>
+        <div class="ti-meta">${k.tipo} · ${COMPS.filter(c => c.categoria_id === k.id).length} inscritos</div>
+        <select class="tat-assign" data-id="${k.id}">
+          <option value="">Asignar a tatami…</option>
+          ${Array.from({ length: num }, (_, i) => `<option value="${i + 1}">Tatami ${i + 1}</option>`).join('')}
+        </select>
+      </div>`).join('') : '<p class="tat-empty">Todas las categorías están asignadas.</p>';
+    html += '</div>';
+
+    // Columnas por tatami
+    for(let n = 1; n <= maxUsado; n++){
+      const catsCol = CATS.filter(k => k.tatami === n).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+      html += `<div class="tat-col"><h3>Tatami ${n} <span class="tt">${catsCol.length} categoría${catsCol.length === 1 ? '' : 's'}</span></h3>`;
+      html += catsCol.length ? catsCol.map((k, i) => {
+        const st = estadoCat(k);
+        return `
+        <div class="tat-item">
+          <div class="ti-top">
+            <div>
+              <div class="ti-nm"><span class="tat-num-badge">${i + 1}.</span>${esc(k.nombre)}</div>
+              <div class="ti-meta">${k.tipo} · ${COMPS.filter(c => c.categoria_id === k.id).length} inscritos ·
+                <span style="color:${st.color};">${st.txt}</span></div>
+            </div>
+            <div class="ti-acts">
+              <button class="tat-btn tat-up" data-id="${k.id}" data-n="${n}" ${i === 0 ? 'disabled' : ''} title="Subir">↑</button>
+              <button class="tat-btn tat-down" data-id="${k.id}" data-n="${n}" ${i === catsCol.length - 1 ? 'disabled' : ''} title="Bajar">↓</button>
+              <button class="tat-btn tat-out" data-id="${k.id}" data-n="${n}" title="Quitar del tatami">×</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('') : '<p class="tat-empty">Asigna categorías desde la columna "Sin asignar".</p>';
+      html += '</div>';
+    }
+    cols.innerHTML = html;
+
+    // ── Interacciones ──
+    cols.querySelectorAll('.tat-assign').forEach(s => s.addEventListener('change', async () => {
+      if(!s.value) return;
+      const n = parseInt(s.value, 10);
+      const k = CATS.find(x => x.id === s.dataset.id);
+      const col = CATS.filter(x => x.tatami === n).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+      await guardarOrdenCol(n, [...col, k]);
+      await loadAll();
+    }));
+
+    const mover = async (id, n, delta) => {
+      const col = CATS.filter(x => x.tatami === n).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+      const i = col.findIndex(x => x.id === id);
+      const j = i + delta;
+      if(j < 0 || j >= col.length) return;
+      [col[i], col[j]] = [col[j], col[i]];
+      await guardarOrdenCol(n, col);
+      await loadAll();
+    };
+    cols.querySelectorAll('.tat-up').forEach(b => b.addEventListener('click', () => mover(b.dataset.id, parseInt(b.dataset.n, 10), -1)));
+    cols.querySelectorAll('.tat-down').forEach(b => b.addEventListener('click', () => mover(b.dataset.id, parseInt(b.dataset.n, 10), 1)));
+    cols.querySelectorAll('.tat-out').forEach(b => b.addEventListener('click', async () => {
+      await exec('cat_update', { id: b.dataset.id, tatami: '' });
+      const n = parseInt(b.dataset.n, 10);
+      const col = CATS.filter(x => x.tatami === n && x.id !== b.dataset.id).sort((a, b2) => (a.orden || 0) - (b2.orden || 0));
+      await guardarOrdenCol(n, col);
+      await loadAll();
+    }));
+  }
+
+  $('tat-num').addEventListener('change', async () => {
+    await exec('torneo_update', { config: { tatamis: parseInt($('tat-num').value, 10) } });
+    await loadAll();
+  });
+
+  $('tat-auto').addEventListener('click', async () => {
+    const num = numTatamis();
+    const sinAsignar = CATS.filter(k => !k.tatami)
+      .sort((a, b) => COMPS.filter(c => c.categoria_id === b.id).length - COMPS.filter(c => c.categoria_id === a.id).length);
+    if(!sinAsignar.length) return;
+    // reparte a la columna con menos inscritos acumulados
+    const carga = {};
+    const colas = {};
+    for(let n = 1; n <= num; n++){
+      colas[n] = CATS.filter(x => x.tatami === n).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+      carga[n] = colas[n].reduce((s, k) => s + COMPS.filter(c => c.categoria_id === k.id).length, 0);
+    }
+    sinAsignar.forEach(k => {
+      const n = Object.keys(carga).sort((a, b) => carga[a] - carga[b])[0];
+      colas[n].push(k);
+      carga[n] += COMPS.filter(c => c.categoria_id === k.id).length;
+    });
+    const msg = $('tat-msg');
+    msg.textContent = 'Repartiendo…';
+    for(let n = 1; n <= num; n++) await guardarOrdenCol(n, colas[n]);
+    msg.textContent = '';
+    await loadAll();
+  });
 
   // ═══ Ajustes ═══
   function renderAjustes(){
