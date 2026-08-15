@@ -203,6 +203,22 @@
   .br-warn{font-size:12px;color:#ffc107;margin-bottom:12px;}
   .swap-on{border-color:var(--accent) !important;color:var(--accent-2) !important;}
 
+  /* ── Armado manual (arrastrar) ── */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;padding:12px;border:1px dashed var(--border);border-radius:10px;min-height:46px;}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:99px;
+    padding:7px 14px;font-size:13px;font-weight:500;cursor:grab;user-select:none;
+    transition:border-color .15s ease;
+  }
+  .chip:hover{border-color:var(--accent-2);}
+  .chip.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-2);}
+  .chip:active{cursor:grabbing;}
+  .br-slot.arm-drop{border:1px dashed var(--border-2);margin:0;cursor:pointer;}
+  .br-slot.arm-drop.over{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2);}
+  .br-slot.arm{cursor:pointer;}
+  .br-slot.arm:hover .bcheck{opacity:1;}
+
   @media(max-width:640px){
     .fg-2,.fg-3,.fg-4{grid-template-columns:1fr;}
     .stat-row{grid-template-columns:1fr 1fr;}
@@ -815,6 +831,7 @@
   // { modo:'kumite', size, rondas:[[{a,b,g}...]...], finalizada, podio:[{cid,lugar}] }
   let SWAP_MODE = false;
   let SWAP_SEL = null; // {r, m, lado}
+  let ARM_SEL = null;  // cid seleccionado en armado manual
 
   function shuffle(arr){
     const a = [...arr];
@@ -886,6 +903,21 @@
     return L;
   }
 
+  // Estructura vacía para el armado manual (arrastrar competidores)
+  function generarLlaveVacia(cat){
+    const n = COMPS.filter(c => c.categoria_id === cat.id).length;
+    let size = 2;
+    while(size < n) size *= 2;
+    const rondas = [];
+    const r1 = [];
+    for(let i = 0; i < size; i += 2) r1.push({ a: null, b: null, g: null });
+    rondas.push(r1);
+    for(let m = size / 4; m >= 1; m = m / 2){
+      rondas.push(Array.from({ length: m }, () => ({ a: null, b: null, g: null })));
+    }
+    return { modo: 'kumite', size, rondas, finalizada: false, podio: [], armado: true };
+  }
+
   function nombreRonda(i, total){
     if(i === total - 1) return 'Final';
     if(i === total - 2) return 'Semifinales';
@@ -926,15 +958,21 @@
       body.innerHTML = `
         <p class="br-hint">
           Hay <strong>${inscritos.length}</strong> competidor(es) en esta categoría.
-          El sorteo es aleatorio y los BYE (pases directos) se reparten automáticamente.
-          Luego marcas al ganador de cada combate tocándolo, y puedes intercambiar
-          posiciones antes de empezar.
+          Puedes generar el sorteo automático (los pases directos se reparten solos),
+          o armar la llave tú mismo arrastrando a cada competidor a su casilla.
         </p>
-        ${inscritos.length >= 2 ? '<button class="btn btn-primary" id="br-gen">Generar llave</button>'
+        ${inscritos.length >= 2 ? `
+          <div class="kata-actions" style="margin-top:0;">
+            <button class="btn btn-primary" id="br-gen">Generar llave automática</button>
+            <button class="btn btn-ghost" id="br-gen-manual">Armar manualmente</button>
+          </div>`
           : '<p style="font-size:13px;color:var(--accent-2);">Se necesitan al menos 2 competidores.</p>'}`;
       $('br-gen')?.addEventListener('click', () => saveKata(generarLlave(k)));
+      $('br-gen-manual')?.addEventListener('click', () => { ARM_SEL = null; saveKata(generarLlaveVacia(k)); });
       return;
     }
+
+    if(L.armado){ renderArmado(k, L, inscritos); return; }
 
     const enLlave = new Set();
     L.rondas[0].forEach(m => { if(m.a) enLlave.add(m.a); if(m.b) enLlave.add(m.b); });
@@ -969,8 +1007,16 @@
     L.rondas.forEach((ronda, r) => {
       html += `<div class="br-col"><div class="br-col-title">${nombreRonda(r, total)}</div><div class="br-col-inner">`;
       ronda.forEach((m, i) => {
+        // La llave se ajusta a los competidores: los BYE de primera ronda no se
+        // dibujan (salvo en modo intercambio, donde sus casillas son destino válido)
+        if(r === 0 && !SWAP_MODE && (esBye(m) || (!m.a && !m.b))) return;
         const slot = (cid, lado) => {
           if(!cid){
+            if(SWAP_MODE && r === 0){
+              const swapSel = SWAP_SEL && SWAP_SEL.r === r && SWAP_SEL.m === i && SWAP_SEL.lado === lado;
+              return `<div class="br-slot empty ${swapSel ? 'sel-swap' : ''}" style="cursor:pointer;"
+                data-r="${r}" data-m="${i}" data-lado="${lado}">— libre (BYE)</div>`;
+            }
             const txt = r === 0 ? (esBye(m) ? 'BYE' : '—') : 'Por definir';
             return `<div class="br-slot empty">${txt}</div>`;
           }
@@ -1010,7 +1056,7 @@
           const lado = el.dataset.lado;
           const m = L.rondas[r][i];
           const cid = lado === 'a' ? m.a : m.b;
-          if(!cid) return;
+          if(!cid && !(SWAP_MODE && r === 0)) return;
 
           if(SWAP_MODE){
             if(r !== 0){ alert('Solo se pueden intercambiar posiciones de la primera ronda.'); return; }
@@ -1075,6 +1121,128 @@
         saveKata(L);
       });
     }
+  }
+
+  // ═══ Armado manual de la llave (arrastrar o tocar) ═══
+  function renderArmado(k, L, inscritos){
+    const body = $('kata-body');
+    const colocados = new Set();
+    L.rondas[0].forEach(m => { if(m.a) colocados.add(m.a); if(m.b) colocados.add(m.b); });
+    const libres = inscritos.filter(c => !colocados.has(c.id));
+
+    let html = `<p class="br-hint" style="color:var(--accent-2);">
+      Armado manual: arrastra un competidor a su casilla (o tócalo y luego toca la casilla).
+      Toca una casilla ocupada para devolverlo a la lista. Las casillas que queden vacías serán pases directos (BYE).
+    </p>`;
+
+    html += `<div class="chips" id="arm-chips">` + (libres.length
+      ? libres.map(c => `<div class="chip ${ARM_SEL === c.id ? 'sel' : ''}" draggable="true" data-cid="${c.id}">${esc(c.nombre)}<span style="font-size:10px;color:var(--text-faint);">${esc(c.organizacion || '')}</span></div>`).join('')
+      : '<span style="font-size:12px;color:var(--text-faint);">Todos ubicados ✓</span>') + `</div>`;
+
+    html += '<div class="br-scroll"><div class="br-wrap">';
+    html += `<div class="br-col"><div class="br-col-title">Primera ronda</div><div class="br-col-inner">`;
+    L.rondas[0].forEach((m, i) => {
+      const slot = (cid, lado) => cid
+        ? `<div class="br-slot arm" data-m="${i}" data-lado="${lado}">
+            <span>${esc(compNombre(cid))}<span class="borg">${esc(compOrg(cid))}</span></span>
+            <span class="bcheck" style="opacity:.5;">↩</span>
+          </div>`
+        : `<div class="br-slot empty arm-drop" data-m="${i}" data-lado="${lado}">Suelta aquí</div>`;
+      html += `<div class="br-match">${slot(m.a, 'a')}${slot(m.b, 'b')}</div>`;
+    });
+    html += '</div></div></div></div>';
+
+    const ubicados = inscritos.length - libres.length;
+    html += `<div class="kata-actions">
+      <button class="btn btn-primary" id="arm-ok" ${ubicados >= 2 ? '' : 'disabled'}>Confirmar llave</button>
+      <button class="btn btn-ghost" id="arm-auto" ${libres.length ? '' : 'disabled'}>Ubicar restantes al azar</button>
+      <button class="btn btn-danger btn-sm" id="arm-cancel" style="margin-left:auto;">Cancelar armado</button>
+    </div>`;
+
+    body.innerHTML = html;
+
+    function colocar(cid, i, lado){
+      // sácalo de donde esté
+      L.rondas[0].forEach(m => {
+        if(m.a === cid) m.a = null;
+        if(m.b === cid) m.b = null;
+      });
+      // si la casilla estaba ocupada, ese competidor vuelve a la lista
+      const m = L.rondas[0][i];
+      if(lado === 'a') m.a = cid; else m.b = cid;
+      ARM_SEL = null;
+      saveKata(L);
+    }
+
+    // Chips: tocar para seleccionar, o arrastrar
+    body.querySelectorAll('#arm-chips .chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        ARM_SEL = ARM_SEL === chip.dataset.cid ? null : chip.dataset.cid;
+        renderEval();
+      });
+      chip.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', chip.dataset.cid);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+    });
+
+    // Casillas vacías: soltar o tocar (con chip seleccionado)
+    body.querySelectorAll('.arm-drop').forEach(el => {
+      const i = parseInt(el.dataset.m, 10), lado = el.dataset.lado;
+      el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('over'); });
+      el.addEventListener('dragleave', () => el.classList.remove('over'));
+      el.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const cid = e.dataTransfer.getData('text/plain');
+        if(cid) colocar(cid, i, lado);
+      });
+      el.addEventListener('click', () => { if(ARM_SEL) colocar(ARM_SEL, i, lado); });
+    });
+
+    // Casillas ocupadas: tocar devuelve a la lista; soltar encima reemplaza
+    body.querySelectorAll('.br-slot.arm').forEach(el => {
+      const i = parseInt(el.dataset.m, 10), lado = el.dataset.lado;
+      el.addEventListener('click', () => {
+        const m = L.rondas[0][i];
+        if(ARM_SEL){ colocar(ARM_SEL, i, lado); return; }
+        if(lado === 'a') m.a = null; else m.b = null;
+        saveKata(L);
+      });
+      el.addEventListener('dragover', (e) => e.preventDefault());
+      el.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const cid = e.dataTransfer.getData('text/plain');
+        if(cid) colocar(cid, i, lado);
+      });
+    });
+
+    $('arm-auto')?.addEventListener('click', () => {
+      const vacias = [];
+      L.rondas[0].forEach((m, i) => {
+        if(!m.a) vacias.push({ i, lado: 'a' });
+        if(!m.b) vacias.push({ i, lado: 'b' });
+      });
+      const orden = shuffle(vacias);
+      shuffle(libres).forEach((c, idx) => {
+        if(idx < orden.length){
+          const v = orden[idx];
+          if(v.lado === 'a') L.rondas[0][v.i].a = c.id; else L.rondas[0][v.i].b = c.id;
+        }
+      });
+      saveKata(L);
+    });
+
+    $('arm-ok')?.addEventListener('click', () => {
+      if(libres.length && !confirm(`Hay ${libres.length} competidor(es) sin ubicar; quedarán fuera de la llave. ¿Confirmar igual?`)) return;
+      delete L.armado;
+      autoByes(L);
+      saveKata(L);
+    });
+
+    $('arm-cancel')?.addEventListener('click', () => {
+      if(!confirm('¿Cancelar el armado? Se quita la llave.')) return;
+      saveKata(null);
+    });
   }
 
   // 1º y 2º y 3º: mejores puntajes de la ronda final; si la final tiene menos

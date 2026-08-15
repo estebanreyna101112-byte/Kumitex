@@ -372,6 +372,7 @@
     function kumiteHTML(k){
       const L = k.llave;
       if(!L || L.modo !== 'kumite' || !Array.isArray(L.rondas) || !L.rondas.length) return null;
+      if(L.armado) return null; // llave a medio armar: se muestra la lista de inscritos
       const total = L.rondas.length;
       const nombreRonda = (i) => i === total - 1 ? 'Final'
         : i === total - 2 ? 'Semifinales'
@@ -394,6 +395,8 @@
         h += `<div class="br-col"><div class="br-col-title">${nombreRonda(r)}</div><div class="br-col-inner">`;
         ronda.forEach(m => {
           const bye = (m.a && !m.b) || (!m.a && m.b);
+          // la llave se ajusta a los competidores: los BYE de la primera ronda no se dibujan
+          if(r === 0 && (bye || (!m.a && !m.b))) return;
           const slot = (cid) => {
             if(!cid) return `<div class="br-slot empty">${r === 0 ? (bye ? 'BYE' : '—') : 'Por definir'}</div>`;
             return `<div class="br-slot ${m.g === cid ? 'win' : ''}">
