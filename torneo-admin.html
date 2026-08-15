@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel del torneo — Kumitex</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --surface:#161719;
+    --surface-2:#1d1e21;
+    --border:#2a2b2f;
+    --border-2:#3a3b3f;
+    --text:#f5f4f2;
+    --text-dim:#a6a7ac;
+    --text-faint:#6d6e73;
+    --accent:#e2262e;
+    --accent-2:#ff4a52;
+    --accent-soft:rgba(226,38,46,.12);
+    --ok:#3ecf6e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;}
+  .font-display{font-family:'Space Grotesk',sans-serif;}
+  ::selection{background:var(--accent);color:#fff;}
+  a{color:inherit;text-decoration:none;}
+
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px;}
+
+  header.top{border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:30;}
+  .top-inner{height:60px;display:flex;align-items:center;justify-content:space-between;gap:14px;}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0;}
+  .brand img{width:30px;height:30px;border-radius:7px;object-fit:contain;background:rgba(255,255,255,.95);padding:3px;flex:0 0 auto;}
+  .brand .tn{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .brand .sub{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent-2);}
+  .top-actions{display:flex;align-items:center;gap:14px;flex:0 0 auto;}
+  .top-link{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);transition:color .2s;cursor:pointer;background:none;border:none;}
+  .top-link:hover{color:#fff;}
+
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-top:4px;overflow-x:auto;}
+  .tab{
+    background:none;border:none;cursor:pointer;color:var(--text-faint);
+    font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;
+    padding:12px 16px;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s;
+  }
+  .tab:hover{color:var(--text);}
+  .tab.active{color:var(--accent-2);border-bottom-color:var(--accent);}
+
+  main{padding:26px 0 90px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px;}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin-bottom:14px;}
+  .stitle{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent-2);margin-bottom:14px;}
+
+  .field label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);margin-bottom:6px;}
+  .field input,.field select,.field textarea{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:10px 12px;font-size:14px;color:#fff;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s;
+  }
+  .field input::placeholder{color:var(--text-faint);}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent-2);}
+  .fgrid{display:grid;gap:12px;margin-bottom:12px;}
+  .fg-2{grid-template-columns:1fr 1fr;}
+  .fg-3{grid-template-columns:1fr 1fr 1fr;}
+  .fg-4{grid-template-columns:2fr 1fr 1fr 1fr;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;
+    padding:10px 18px;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;border:none;
+    transition:background .2s, border-color .2s;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#c71e25;}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid rgba(245,244,242,.25);color:var(--text);}
+  .btn-ghost:hover{border-color:rgba(245,244,242,.6);}
+  .btn-sm{padding:6px 12px;font-size:12px;border-radius:6px;}
+  .btn-danger{background:transparent;border:1px solid var(--border);color:var(--text-faint);}
+  .btn-danger:hover{border-color:var(--accent);color:var(--accent-2);}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);}
+  td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text-dim);vertical-align:middle;}
+  td.name{color:var(--text);font-weight:500;}
+  td select{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:#fff;padding:5px 8px;font-size:12px;max-width:180px;}
+  .table-scroll{overflow-x:auto;}
+
+  .cat-card{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;flex-wrap:wrap;
+  }
+  .cat-card .info{flex:1;min-width:220px;}
+  .cat-card .nm{font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .cat-card .meta{font-size:12px;color:var(--text-faint);margin-top:3px;}
+  .cat-card .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .badge{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;padding:3px 8px;border-radius:99px;border:1px solid var(--border);color:var(--text-faint);}
+  .badge.pub{border-color:rgba(62,207,110,.4);color:var(--ok);}
+  .badge.tipo{border-color:rgba(226,38,46,.4);color:var(--accent-2);}
+
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .stat .k{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);}
+  .stat .v{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:600;margin-top:2px;}
+
+  .msg{font-size:13px;margin-top:10px;min-height:18px;}
+  .msg.ok{color:var(--ok);}
+  .msg.err{color:var(--accent-2);}
+
+  .login-box{max-width:380px;margin:90px auto;padding:0 20px;}
+  .login-box h1{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;margin-bottom:6px;}
+  .login-box p{font-size:13px;color:var(--text-faint);margin-bottom:22px;}
+  .login-box .field{margin-bottom:12px;}
+
+  .search{margin-bottom:12px;}
+  .search input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:#fff;outline:none;}
+  .search input:focus{border-color:var(--accent-2);}
+
+  @media(max-width:640px){
+    .fg-2,.fg-3,.fg-4{grid-template-columns:1fr;}
+    .stat-row{grid-template-columns:1fr 1fr;}
+    .top-actions .hide-sm{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ════ LOGIN ════ -->
+<div id="login-view" class="login-box">
+  <h1 id="login-title">Panel del torneo</h1>
+  <p>Ingresa la contraseña de administrador que te entregó Kumitex.</p>
+  <form id="login-form">
+    <div class="field"><input id="login-pass" type="password" required placeholder="Contraseña" autocomplete="current-password"></div>
+    <p id="login-error" class="msg err" style="display:none;">Contraseña incorrecta.</p>
+    <button type="submit" id="login-btn" class="btn btn-primary" style="width:100%;">Ingresar</button>
+  </form>
+</div>
+
+<!-- ════ PANEL ════ -->
+<div id="panel-view" style="display:none;">
+  <header class="top">
+    <div class="wrap">
+      <div class="top-inner">
+        <div class="brand">
+          <img src="Logo.png" alt="Kumitex" id="brand-logo">
+          <div style="min-width:0;">
+            <div class="sub">Panel del torneo</div>
+            <div class="tn" id="torneo-nombre">…</div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <a class="top-link hide-sm" id="link-publico" target="_blank" rel="noopener">Ver página pública ↗</a>
+          <button class="top-link" id="logout-btn">Salir</button>
+        </div>
+      </div>
+      <nav class="tabs">
+        <button class="tab active" data-view="inscripciones">Inscripciones</button>
+        <button class="tab" data-view="categorias">Categorías</button>
+        <button class="tab" data-view="ajustes">Ajustes</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <!-- ══ INSCRIPCIONES ══ -->
+    <section class="view active" data-view="inscripciones">
+      <div class="stat-row">
+        <div class="stat"><div class="k">Inscritos</div><div class="v" id="st-comp">0</div></div>
+        <div class="stat"><div class="k">Categorías</div><div class="v" id="st-cat">0</div></div>
+        <div class="stat"><div class="k">Clubes</div><div class="v" id="st-org">0</div></div>
+        <div class="stat"><div class="k">Sin categoría</div><div class="v" id="st-sincat">0</div></div>
+      </div>
+
+      <div class="card">
+        <h2 id="comp-form-title">Inscribir competidor</h2>
+        <form id="comp-form">
+          <input type="hidden" id="c-id">
+          <div class="fgrid fg-4">
+            <div class="field"><label>Nombre *</label><input id="c-nombre" type="text" required placeholder="Nombre y apellido"></div>
+            <div class="field"><label>Sexo</label>
+              <select id="c-sexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Femenino</option></select>
+            </div>
+            <div class="field"><label>Edad</label><input id="c-edad" type="number" min="4" max="99" placeholder="Ej: 24"></div>
+            <div class="field"><label>Peso (kg)</label><input id="c-peso" type="number" step="0.1" min="10" placeholder="Ej: 66.5"></div>
+          </div>
+          <div class="fgrid fg-3">
+            <div class="field"><label>Grado / cinturón</label><input id="c-grado" type="text" placeholder="Ej: Cinturón negro"></div>
+            <div class="field"><label>Club u organización</label><input id="c-org" type="text" placeholder="Ej: Dojo Central"></div>
+            <div class="field"><label>País</label><input id="c-pais" type="text" placeholder="Ej: Chile"></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button type="submit" class="btn btn-primary" id="comp-submit">Inscribir</button>
+            <button type="button" class="btn btn-ghost" id="comp-cancel" style="display:none;">Cancelar edición</button>
+            <span class="msg" id="comp-msg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Lista de competidores</h2>
+        <div class="search"><input id="comp-search" type="text" placeholder="Buscar por nombre, club o país…"></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Nombre</th><th>Sexo</th><th>Edad</th><th>Peso</th><th>Grado</th><th>Club</th><th>País</th><th>Categoría</th><th></th></tr></thead>
+            <tbody id="comp-tbody"></tbody>
+          </table>
+        </div>
+        <p id="comp-empty" style="display:none;color:var(--text-faint);font-size:13px;padding:14px 0 4px;">Aún no hay competidores inscritos.</p>
+      </div>
+    </section>
+
+    <!-- ══ CATEGORÍAS ══ -->
+    <section class="view" data-view="categorias">
+      <div class="card">
+        <h2>Crear categoría</h2>
+        <form id="cat-form">
+          <div class="fgrid fg-2">
+            <div class="field"><label>Nombre *</label><input id="k-nombre" type="text" required placeholder="Ej: Kumite Varones -67kg"></div>
+            <div class="field"><label>Tipo</label>
+              <select id="k-tipo"><option value="kumite">Kumite</option><option value="kata">Kata</option></select>
+            </div>
+          </div>
+          <div class="fgrid fg-4">
+            <div class="field"><label>Sexo (filtro)</label>
+              <select id="k-sexo"><option value="">Mixto / cualquiera</option><option value="M">Masculino</option><option value="F">Femenino</option></select>
+            </div>
+            <div class="field"><label>Edad mín.</label><input id="k-edad-min" type="number" min="4" placeholder="—"></div>
+            <div class="field"><label>Edad máx.</label><input id="k-edad-max" type="number" min="4" placeholder="—"></div>
+            <div class="field"><label>Peso máx. (kg)</label><input id="k-peso-max" type="number" step="0.1" placeholder="—"></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button type="submit" class="btn btn-primary">Crear categoría</button>
+            <span class="msg" id="cat-msg"></span>
+          </div>
+          <p style="font-size:12px;color:var(--text-faint);margin-top:10px;">Los filtros (sexo, edad, peso) permiten asignar competidores automáticamente con un clic.</p>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Tus categorías</h2>
+        <div id="cat-list"></div>
+        <p id="cat-empty" style="display:none;color:var(--text-faint);font-size:13px;">Aún no hay categorías creadas.</p>
+      </div>
+    </section>
+
+    <!-- ══ AJUSTES ══ -->
+    <section class="view" data-view="ajustes">
+      <div class="card">
+        <h2>Datos del torneo</h2>
+        <div class="fgrid fg-2">
+          <div class="field"><label>Nombre del torneo</label><input id="a-nombre" type="text"></div>
+          <div class="field"><label>Organización</label><input id="a-org" type="text" placeholder="Ej: World Kyokushin Budokai"></div>
+        </div>
+        <div class="fgrid fg-3">
+          <div class="field"><label>Fecha</label><input id="a-fecha" type="text" placeholder="Ej: 14–16 nov 2026"></div>
+          <div class="field"><label>Lugar</label><input id="a-lugar" type="text" placeholder="Ej: Santiago, Chile"></div>
+          <div class="field"><label>Estado</label>
+            <select id="a-estado">
+              <option value="preparacion">En preparación</option>
+              <option value="inscripciones">Inscripciones abiertas</option>
+              <option value="en_curso">En curso</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+          </div>
+        </div>
+        <div class="fgrid fg-2">
+          <div class="field"><label>Color de acento</label><input id="a-color" type="color" style="height:42px;padding:4px;"></div>
+          <div class="field"><label>Página pública</label>
+            <select id="a-publicado"><option value="false">Oculta</option><option value="true">Publicada</option></select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-primary" id="a-guardar">Guardar cambios</button>
+          <span class="msg" id="a-msg"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Cambiar contraseña</h2>
+        <form id="pw-form">
+          <div class="fgrid fg-2">
+            <div class="field"><label>Nueva contraseña (mín. 8)</label><input id="pw-new" type="password" required minlength="8" autocomplete="new-password"></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button type="submit" class="btn btn-ghost">Actualizar contraseña</button>
+            <span class="msg" id="pw-msg"></span>
+          </div>
+        </form>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  const SLUG = new URLSearchParams(location.search).get('t');
+  const SS_KEY = 'kumitex_t_' + SLUG;
+  let SECRET = SLUG ? sessionStorage.getItem(SS_KEY) : null;
+
+  let TORNEO = null, COMPS = [], CATS = [];
+
+  if(!SLUG){
+    document.body.innerHTML = '<div class="login-box"><h1>Falta el torneo</h1><p>La URL debe incluir el torneo: <code>torneo-admin.html?t=tu-torneo</code></p></div>';
+    throw new Error('sin slug');
+  }
+
+  // Toda acción de escritura pasa por el gateway con la contraseña del torneo
+  async function exec(action, payload = {}){
+    const { data, error } = await sb.rpc('kumitex_t_exec', {
+      p_slug: SLUG, p_secret: SECRET, p_action: action, p_payload: payload
+    });
+    if(error) return { ok: false, error: error.message };
+    return data;
+  }
+
+  // ═══ Login ═══
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('login-btn');
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    SECRET = $('login-pass').value;
+    const r = await exec('verificar');
+    btn.disabled = false; btn.textContent = 'Ingresar';
+    if(!r.ok){ $('login-error').style.display = 'block'; SECRET = null; return; }
+    sessionStorage.setItem(SS_KEY, SECRET);
+    enterPanel();
+  });
+
+  $('logout-btn')?.addEventListener('click', () => {
+    sessionStorage.removeItem(SS_KEY);
+    location.reload();
+  });
+
+  // ═══ Tabs ═══
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === t.dataset.view));
+  }));
+
+  // ═══ Carga de datos ═══
+  async function loadAll(){
+    const [t, c, k] = await Promise.all([
+      sb.from('kumitex_torneos').select('*').eq('slug', SLUG).single(),
+      sb.from('kumitex_competidores').select('*').order('created_at'),
+      sb.from('kumitex_categorias').select('*').order('orden').order('created_at')
+    ]);
+    TORNEO = t.data;
+    COMPS = (c.data || []).filter(x => x.torneo_id === TORNEO.id);
+    CATS = (k.data || []).filter(x => x.torneo_id === TORNEO.id);
+    renderAll();
+  }
+
+  function renderAll(){
+    $('torneo-nombre').textContent = TORNEO.nombre;
+    document.title = `${TORNEO.nombre} — Panel`;
+    $('link-publico').href = `torneo.html?t=${SLUG}`;
+    renderComps();
+    renderCats();
+    renderAjustes();
+  }
+
+  // ═══ Inscripciones ═══
+  function catName(id){
+    const c = CATS.find(x => x.id === id);
+    return c ? c.nombre : '';
+  }
+
+  function renderComps(){
+    const q = ($('comp-search').value || '').toLowerCase();
+    const rows = COMPS.filter(c =>
+      !q || [c.nombre, c.organizacion, c.pais].join(' ').toLowerCase().includes(q));
+
+    $('st-comp').textContent = COMPS.length;
+    $('st-cat').textContent = CATS.length;
+    $('st-org').textContent = new Set(COMPS.map(c => (c.organizacion || '').trim().toLowerCase()).filter(Boolean)).size;
+    $('st-sincat').textContent = COMPS.filter(c => !c.categoria_id).length;
+
+    const catOpts = (sel) => `<option value="">Sin categoría</option>` +
+      CATS.map(k => `<option value="${k.id}" ${k.id === sel ? 'selected' : ''}>${esc(k.nombre)}</option>`).join('');
+
+    $('comp-tbody').innerHTML = rows.map(c => `
+      <tr data-id="${c.id}">
+        <td class="name">${esc(c.nombre)}</td>
+        <td>${esc(c.sexo || '—')}</td>
+        <td>${c.edad ?? '—'}</td>
+        <td>${c.peso ?? '—'}</td>
+        <td>${esc(c.grado || '—')}</td>
+        <td>${esc(c.organizacion || '—')}</td>
+        <td>${esc(c.pais || '—')}</td>
+        <td><select class="row-cat">${catOpts(c.categoria_id)}</select></td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-sm btn-ghost row-edit">Editar</button>
+          <button class="btn btn-sm btn-danger row-del">×</button>
+        </td>
+      </tr>`).join('');
+    $('comp-empty').style.display = rows.length ? 'none' : 'block';
+
+    document.querySelectorAll('#comp-tbody tr').forEach(tr => {
+      const id = tr.dataset.id;
+      tr.querySelector('.row-cat').addEventListener('change', async (e) => {
+        await exec('comp_update', { id, categoria_id: e.target.value });
+        const comp = COMPS.find(x => x.id === id);
+        if(comp) comp.categoria_id = e.target.value || null;
+        renderComps(); renderCats();
+      });
+      tr.querySelector('.row-del').addEventListener('click', async () => {
+        if(!confirm('¿Eliminar a este competidor?')) return;
+        await exec('comp_delete', { id });
+        COMPS = COMPS.filter(x => x.id !== id);
+        renderComps(); renderCats();
+      });
+      tr.querySelector('.row-edit').addEventListener('click', () => {
+        const c = COMPS.find(x => x.id === id);
+        $('c-id').value = c.id;
+        $('c-nombre').value = c.nombre; $('c-sexo').value = c.sexo || '';
+        $('c-edad').value = c.edad ?? ''; $('c-peso').value = c.peso ?? '';
+        $('c-grado').value = c.grado || ''; $('c-org').value = c.organizacion || '';
+        $('c-pais').value = c.pais || '';
+        $('comp-form-title').textContent = 'Editar competidor';
+        $('comp-submit').textContent = 'Guardar cambios';
+        $('comp-cancel').style.display = 'inline-flex';
+        window.scrollTo({top: 0, behavior: 'smooth'});
+      });
+    });
+  }
+
+  $('comp-search').addEventListener('input', renderComps);
+
+  function resetCompForm(){
+    $('comp-form').reset();
+    $('c-id').value = '';
+    $('comp-form-title').textContent = 'Inscribir competidor';
+    $('comp-submit').textContent = 'Inscribir';
+    $('comp-cancel').style.display = 'none';
+  }
+  $('comp-cancel').addEventListener('click', resetCompForm);
+
+  $('comp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      nombre: $('c-nombre').value.trim(),
+      sexo: $('c-sexo').value,
+      edad: $('c-edad').value,
+      peso: $('c-peso').value,
+      grado: $('c-grado').value.trim(),
+      organizacion: $('c-org').value.trim(),
+      pais: $('c-pais').value.trim()
+    };
+    const editId = $('c-id').value;
+    const msg = $('comp-msg');
+    let r;
+    if(editId){ r = await exec('comp_update', { ...payload, id: editId }); }
+    else { r = await exec('comp_add', payload); }
+    if(!r.ok){ msg.textContent = 'Error: ' + (r.error || ''); msg.className = 'msg err'; return; }
+    msg.textContent = editId ? '✓ Actualizado' : '✓ Inscrito';
+    msg.className = 'msg ok';
+    setTimeout(() => msg.textContent = '', 2000);
+    resetCompForm();
+    await loadAll();
+  });
+
+  // ═══ Categorías ═══
+  function catFiltroTxt(k){
+    const p = [];
+    if(k.sexo) p.push(k.sexo === 'M' ? 'Varones' : 'Damas'); else p.push('Mixto');
+    if(k.edad_min != null || k.edad_max != null) p.push(`${k.edad_min ?? '·'}–${k.edad_max ?? '·'} años`);
+    if(k.peso_min != null) p.push(`desde ${k.peso_min}kg`);
+    if(k.peso_max != null) p.push(`hasta ${k.peso_max}kg`);
+    return p.join(' · ');
+  }
+
+  function renderCats(){
+    $('cat-list').innerHTML = CATS.map(k => {
+      const n = COMPS.filter(c => c.categoria_id === k.id).length;
+      return `
+      <div class="cat-card" data-id="${k.id}">
+        <div class="info">
+          <div class="nm">${esc(k.nombre)}
+            <span class="badge tipo">${k.tipo}</span>
+            <span class="badge ${k.estado === 'publicada' ? 'pub' : ''}">${k.estado}</span>
+          </div>
+          <div class="meta">${catFiltroTxt(k)} · <strong>${n} inscrito${n === 1 ? '' : 's'}</strong></div>
+        </div>
+        <div class="acts">
+          <button class="btn btn-sm btn-ghost k-auto">Auto-asignar</button>
+          <button class="btn btn-sm btn-ghost k-pub">${k.estado === 'publicada' ? 'Ocultar' : 'Publicar'}</button>
+          <button class="btn btn-sm btn-danger k-del">×</button>
+        </div>
+      </div>`;
+    }).join('');
+    $('cat-empty').style.display = CATS.length ? 'none' : 'block';
+
+    document.querySelectorAll('.cat-card').forEach(card => {
+      const id = card.dataset.id;
+      card.querySelector('.k-auto').addEventListener('click', async () => {
+        const r = await exec('cat_auto_asignar', { id });
+        if(r.ok) alert(`Se asignaron ${r.asignados} competidor(es) que calzaban con los filtros y no tenían categoría.`);
+        await loadAll();
+      });
+      card.querySelector('.k-pub').addEventListener('click', async () => {
+        const k = CATS.find(x => x.id === id);
+        await exec('cat_update', { id, estado: k.estado === 'publicada' ? 'borrador' : 'publicada' });
+        await loadAll();
+      });
+      card.querySelector('.k-del').addEventListener('click', async () => {
+        if(!confirm('¿Eliminar esta categoría? Sus competidores quedarán sin categoría.')) return;
+        await exec('cat_delete', { id });
+        await loadAll();
+      });
+    });
+  }
+
+  $('cat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const r = await exec('cat_add', {
+      nombre: $('k-nombre').value.trim(),
+      tipo: $('k-tipo').value,
+      sexo: $('k-sexo').value,
+      edad_min: $('k-edad-min').value,
+      edad_max: $('k-edad-max').value,
+      peso_max: $('k-peso-max').value
+    });
+    const msg = $('cat-msg');
+    if(!r.ok){ msg.textContent = 'Error: ' + (r.error || ''); msg.className = 'msg err'; return; }
+    msg.textContent = '✓ Categoría creada'; msg.className = 'msg ok';
+    setTimeout(() => msg.textContent = '', 2000);
+    $('cat-form').reset();
+    await loadAll();
+  });
+
+  // ═══ Ajustes ═══
+  function renderAjustes(){
+    $('a-nombre').value = TORNEO.nombre || '';
+    $('a-org').value = TORNEO.organizacion || '';
+    $('a-fecha').value = TORNEO.fecha || '';
+    $('a-lugar').value = TORNEO.lugar || '';
+    $('a-estado').value = TORNEO.estado;
+    $('a-color').value = TORNEO.color_acento || '#e2262e';
+    $('a-publicado').value = String(TORNEO.publicado);
+  }
+
+  $('a-guardar').addEventListener('click', async () => {
+    const r = await exec('torneo_update', {
+      nombre: $('a-nombre').value.trim(),
+      organizacion: $('a-org').value.trim(),
+      fecha: $('a-fecha').value.trim(),
+      lugar: $('a-lugar').value.trim(),
+      estado: $('a-estado').value,
+      color_acento: $('a-color').value,
+      publicado: $('a-publicado').value
+    });
+    const msg = $('a-msg');
+    if(!r.ok){ msg.textContent = 'Error al guardar'; msg.className = 'msg err'; return; }
+    msg.textContent = '✓ Guardado'; msg.className = 'msg ok';
+    setTimeout(() => msg.textContent = '', 2000);
+    await loadAll();
+  });
+
+  $('pw-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const r = await exec('password_change', { nueva: $('pw-new').value });
+    const msg = $('pw-msg');
+    if(!r.ok){ msg.textContent = r.error === 'clave_corta' ? 'Mínimo 8 caracteres.' : 'Error al cambiar.'; msg.className = 'msg err'; return; }
+    SECRET = $('pw-new').value;
+    sessionStorage.setItem(SS_KEY, SECRET);
+    $('pw-form').reset();
+    msg.textContent = '✓ Contraseña actualizada'; msg.className = 'msg ok';
+    setTimeout(() => msg.textContent = '', 2500);
+  });
+
+  // ═══ Utilidades ═══
+  function esc(s){
+    const d = document.createElement('div');
+    d.textContent = s ?? '';
+    return d.innerHTML;
+  }
+
+  async function enterPanel(){
+    $('login-view').style.display = 'none';
+    $('panel-view').style.display = 'block';
+    await loadAll();
+  }
+
+  // Sesión previa
+  (async () => {
+    const { data } = await sb.from('kumitex_torneos').select('nombre').eq('slug', SLUG).single();
+    if(data) $('login-title').textContent = data.nombre;
+    if(SECRET){
+      const r = await exec('verificar');
+      if(r.ok) enterPanel();
+      else sessionStorage.removeItem(SS_KEY);
+    }
+  })();
+</script>
+
+</body>
+</html>

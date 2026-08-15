@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Torneo — Kumitex</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --surface:#161719;
+    --surface-2:#1d1e21;
+    --border:#2a2b2f;
+    --text:#f5f4f2;
+    --text-dim:#a6a7ac;
+    --text-faint:#6d6e73;
+    --accent:#e2262e;
+    --accent-2:#ff4a52;
+    --accent-soft:rgba(226,38,46,.12);
+    --ok:#3ecf6e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;}
+  ::selection{background:var(--accent);color:#fff;}
+  a{color:inherit;text-decoration:none;}
+  img{max-width:100%;}
+
+  .tatami-grid{
+    background-image:
+      linear-gradient(rgba(245,244,242,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,244,242,.05) 1px, transparent 1px);
+    background-size:44px 44px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:0 20px;}
+
+  header.top{border-bottom:1px solid var(--border);background:rgba(10,10,11,.85);backdrop-filter:blur(10px);position:sticky;top:0;z-index:30;}
+  .top-inner{height:60px;display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0;}
+  .brand img{width:32px;height:32px;border-radius:7px;object-fit:contain;background:rgba(255,255,255,.95);padding:3px;}
+  .brand span{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .powered{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);}
+  .powered a{color:var(--accent-2);}
+
+  .hero{position:relative;padding:52px 0 40px;overflow:hidden;border-bottom:1px solid var(--border);}
+  .hero .bgfx{position:absolute;inset:0;background:radial-gradient(circle at 50% 0%, var(--accent-soft), transparent 60%);pointer-events:none;}
+  .estado{
+    display:inline-flex;align-items:center;gap:8px;
+    border:1px solid var(--border);padding:6px 12px;margin-bottom:18px;
+    font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);
+  }
+  .estado .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 0 var(--accent-soft);animation:pulse 1.8s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(226,38,46,.5);}
+    70%{box-shadow:0 0 0 8px rgba(226,38,46,0);}
+    100%{box-shadow:0 0 0 0 rgba(226,38,46,0);}
+  }
+  .hero h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,6vw,44px);line-height:1.08;font-weight:600;letter-spacing:-.02em;margin-bottom:8px;}
+  .hero .sub{color:var(--text-dim);font-size:15px;display:flex;gap:14px;flex-wrap:wrap;}
+  .hero .sub span{display:inline-flex;align-items:center;gap:6px;}
+  .hero-logo{width:76px;height:76px;border-radius:14px;object-fit:contain;background:rgba(255,255,255,.95);padding:8px;margin-bottom:18px;display:none;}
+
+  main{padding:30px 0 90px;}
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:26px;}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .stat .k{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);}
+  .stat .v{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;margin-top:2px;}
+
+  h2.sec{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.14em;color:var(--accent-2);margin-bottom:14px;}
+
+  details.cat{
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    margin-bottom:10px;overflow:hidden;
+  }
+  details.cat summary{
+    list-style:none;cursor:pointer;padding:15px 18px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  details.cat summary::-webkit-details-marker{display:none;}
+  .cat-nm{font-weight:600;font-size:15px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .badge{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;padding:3px 8px;border-radius:99px;border:1px solid var(--border);color:var(--text-faint);}
+  .badge.tipo{border-color:var(--accent);color:var(--accent-2);}
+  .cat-n{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);white-space:nowrap;}
+  .cat-body{border-top:1px solid var(--border);padding:6px 18px 14px;}
+  .comp-line{
+    display:flex;justify-content:space-between;gap:10px;padding:8px 0;
+    border-bottom:1px solid var(--border);font-size:14px;color:var(--text-dim);
+  }
+  .comp-line:last-child{border-bottom:none;}
+  .comp-line .nm{color:var(--text);font-weight:500;}
+  .comp-line .org{font-size:12px;color:var(--text-faint);}
+
+  .center-msg{max-width:480px;margin:110px auto;text-align:center;padding:0 20px;}
+  .center-msg h1{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;margin-bottom:10px;}
+  .center-msg p{color:var(--text-dim);font-size:15px;}
+
+  footer.site{border-top:1px solid var(--border);padding:24px 0;}
+  .foot-inner{max-width:860px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;
+    font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);}
+  .foot-inner a:hover{color:#fff;}
+
+  @media(max-width:560px){
+    .stat-row{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div id="app" style="display:none;">
+  <header class="top">
+    <div class="wrap top-inner">
+      <div class="brand">
+        <img src="Logo.png" alt="" id="nav-logo">
+        <span id="nav-nombre">Torneo</span>
+      </div>
+      <span class="powered">con <a href="index.html">Kumitex</a></span>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="bgfx"></div>
+    <div class="tatami-grid" style="position:absolute;inset:0;opacity:.35;pointer-events:none;"></div>
+    <div class="wrap" style="position:relative;">
+      <img id="hero-logo" class="hero-logo" alt="Logo del torneo">
+      <div class="estado"><span class="dot"></span> <span id="estado-txt">…</span></div>
+      <h1 id="hero-nombre">…</h1>
+      <div class="sub">
+        <span id="hero-org" style="display:none;"></span>
+        <span id="hero-fecha" style="display:none;"></span>
+        <span id="hero-lugar" style="display:none;"></span>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <div class="stat-row">
+      <div class="stat"><div class="k">Inscritos</div><div class="v" id="st-comp">0</div></div>
+      <div class="stat"><div class="k">Categorías</div><div class="v" id="st-cat">0</div></div>
+      <div class="stat"><div class="k">Clubes</div><div class="v" id="st-org">0</div></div>
+      <div class="stat"><div class="k">Países</div><div class="v" id="st-pais">0</div></div>
+    </div>
+
+    <h2 class="sec">Categorías</h2>
+    <div id="cat-list"></div>
+    <p id="cat-empty" style="display:none;color:var(--text-faint);font-size:14px;">Las categorías se publicarán pronto.</p>
+  </main>
+
+  <footer class="site">
+    <div class="foot-inner">
+      <span id="foot-nombre">Torneo</span>
+      <a href="index.html">Kumitex</a>
+    </div>
+  </footer>
+</div>
+
+<div id="not-found" class="center-msg" style="display:none;">
+  <h1>Torneo no encontrado</h1>
+  <p>Revisa el enlace que te compartieron.</p>
+</div>
+
+<div id="not-public" class="center-msg" style="display:none;">
+  <h1 id="np-nombre">Este torneo aún no está publicado</h1>
+  <p>El organizador está preparando la información. Vuelve pronto.</p>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  const SLUG = new URLSearchParams(location.search).get('t');
+  const ESTADOS = {
+    preparacion: 'En preparación',
+    inscripciones: 'Inscripciones abiertas',
+    en_curso: 'En curso · Live',
+    finalizado: 'Torneo finalizado'
+  };
+
+  function esc(s){
+    const d = document.createElement('div');
+    d.textContent = s ?? '';
+    return d.innerHTML;
+  }
+
+  async function load(){
+    if(!SLUG){ $('not-found').style.display = 'block'; return; }
+    const { data: t } = await sb.from('kumitex_torneos').select('*').eq('slug', SLUG).single();
+    if(!t){ $('not-found').style.display = 'block'; return; }
+    if(!t.publicado){
+      $('np-nombre').textContent = `"${t.nombre}" aún no está publicado`;
+      $('not-public').style.display = 'block';
+      return;
+    }
+
+    const [{ data: comps }, { data: cats }] = await Promise.all([
+      sb.from('kumitex_competidores').select('*').eq('torneo_id', t.id),
+      sb.from('kumitex_categorias').select('*').eq('torneo_id', t.id).order('orden').order('created_at')
+    ]);
+    render(t, comps || [], cats || []);
+  }
+
+  function render(t, comps, cats){
+    document.title = `${t.nombre} — Kumitex`;
+    document.documentElement.style.setProperty('--accent', t.color_acento || '#e2262e');
+    document.documentElement.style.setProperty('--accent-2', t.color_acento || '#ff4a52');
+
+    $('nav-nombre').textContent = t.nombre;
+    $('hero-nombre').textContent = t.nombre;
+    $('foot-nombre').textContent = `© ${new Date().getFullYear()} ${t.nombre}`;
+    $('estado-txt').textContent = ESTADOS[t.estado] || t.estado;
+
+    if(t.logo_url){
+      $('hero-logo').src = t.logo_url; $('hero-logo').style.display = 'block';
+      $('nav-logo').src = t.logo_url;
+    }
+    if(t.organizacion){ $('hero-org').textContent = t.organizacion; $('hero-org').style.display = 'inline-flex'; }
+    if(t.fecha){ $('hero-fecha').textContent = '📅 ' + t.fecha; $('hero-fecha').style.display = 'inline-flex'; }
+    if(t.lugar){ $('hero-lugar').textContent = '📍 ' + t.lugar; $('hero-lugar').style.display = 'inline-flex'; }
+
+    $('st-comp').textContent = comps.length;
+    $('st-org').textContent = new Set(comps.map(c => (c.organizacion || '').trim().toLowerCase()).filter(Boolean)).size;
+    $('st-pais').textContent = new Set(comps.map(c => (c.pais || '').trim().toLowerCase()).filter(Boolean)).size;
+
+    const pub = cats.filter(k => k.estado === 'publicada');
+    $('st-cat').textContent = pub.length;
+
+    $('cat-list').innerHTML = pub.map(k => {
+      const inscritos = comps.filter(c => c.categoria_id === k.id);
+      return `
+      <details class="cat">
+        <summary>
+          <span class="cat-nm">${esc(k.nombre)} <span class="badge tipo">${k.tipo}</span></span>
+          <span class="cat-n">${inscritos.length} inscrito${inscritos.length === 1 ? '' : 's'} ▾</span>
+        </summary>
+        <div class="cat-body">
+          ${inscritos.length ? inscritos.map(c => `
+            <div class="comp-line">
+              <span class="nm">${esc(c.nombre)}</span>
+              <span class="org">${esc([c.organizacion, c.pais].filter(Boolean).join(' · '))}</span>
+            </div>`).join('') : '<p style="color:var(--text-faint);font-size:13px;padding:8px 0;">Aún sin inscritos.</p>'}
+        </div>
+      </details>`;
+    }).join('');
+    $('cat-empty').style.display = pub.length ? 'none' : 'block';
+
+    $('app').style.display = 'block';
+  }
+
+  load();
+  setInterval(load, 20000); // refresco automático cada 20s
+</script>
+
+</body>
+</html>

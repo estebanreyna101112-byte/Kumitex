@@ -126,6 +126,30 @@
   </div>
 
   <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-5">
+    <p class="section-title">Torneos de clientes</p>
+    <p class="text-sm text-[var(--text-dim)]">Crea el sitio de un cliente y entrégale su enlace de panel + contraseña.</p>
+    <form id="torneo-form" class="grid sm:grid-cols-3 gap-4">
+      <div>
+        <label class="field-label" for="t-slug">Identificador (URL)</label>
+        <input id="t-slug" type="text" required pattern="[a-z0-9-]{3,40}" placeholder="ej: copa-nacional-2026" class="field">
+      </div>
+      <div>
+        <label class="field-label" for="t-nombre">Nombre del torneo</label>
+        <input id="t-nombre" type="text" required placeholder="Ej: Copa Nacional 2026" class="field">
+      </div>
+      <div>
+        <label class="field-label" for="t-pass">Contraseña del cliente (mín. 8)</label>
+        <input id="t-pass" type="text" required minlength="8" placeholder="La que le entregarás" class="field">
+      </div>
+      <div class="sm:col-span-3 flex items-center gap-4">
+        <button type="submit" class="btn-primary px-5 py-2.5 text-sm rounded-md">Crear torneo</button>
+        <span id="torneo-status" class="text-sm"></span>
+      </div>
+    </form>
+    <div id="torneos-list" class="flex flex-col gap-2.5"></div>
+  </section>
+
+  <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-5">
     <p class="section-title">Solicitudes recibidas</p>
     <p class="text-sm text-[var(--text-dim)]">Las cotizaciones enviadas por los clientes se guardan en Supabase.</p>
     <a href="https://supabase.com/dashboard/project/rldtkomtclolhbmrphgh/editor" target="_blank" rel="noopener" class="btn-ghost inline-flex w-fit px-5 py-2.5 text-sm rounded-md">Abrir tabla de solicitudes →</a>
@@ -190,6 +214,7 @@
     if(error || !data){ alert('No se pudo cargar la configuración.'); return; }
     CONFIG = data.config;
     renderConfig();
+    loadTorneos();
   }
 
   // ═══ Render de configuración ═══
@@ -259,6 +284,55 @@
     CONFIG = nuevo;
     st.textContent = '✓ Guardado'; st.style.color = 'var(--ok)';
     setTimeout(() => st.textContent = '', 2500);
+  });
+
+  // ═══ Torneos de clientes ═══
+  async function loadTorneos(){
+    const { data } = await sb.from('kumitex_torneos').select('slug, nombre, estado, publicado, created_at').order('created_at', { ascending: false });
+    const list = $('torneos-list');
+    if(!data || !data.length){ list.innerHTML = '<p class="text-sm text-[var(--text-faint)]">Aún no hay torneos creados.</p>'; return; }
+    list.innerHTML = data.map(t => `
+      <div class="flex items-center justify-between gap-3 flex-wrap border hairline rounded-lg px-4 py-3 bg-[var(--surface-2)]">
+        <div>
+          <p class="font-semibold text-sm">${t.nombre}</p>
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-0.5">${t.slug} · ${t.estado} · ${t.publicado ? 'publicado' : 'oculto'}</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <a href="torneo.html?t=${t.slug}" target="_blank" rel="noopener" class="btn-ghost px-3 py-1.5 text-xs rounded-md">Pública ↗</a>
+          <a href="torneo-admin.html?t=${t.slug}" target="_blank" rel="noopener" class="btn-ghost px-3 py-1.5 text-xs rounded-md">Panel ↗</a>
+          <button data-slug="${t.slug}" class="torneo-del font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] hover:text-[var(--accent-2)] transition-colors px-2">Eliminar</button>
+        </div>
+      </div>`).join('');
+    list.querySelectorAll('.torneo-del').forEach(b => b.addEventListener('click', async () => {
+      if(!confirm(`¿Eliminar el torneo "${b.dataset.slug}" y TODOS sus datos (competidores, categorías)? Esta acción no se puede deshacer.`)) return;
+      await sb.rpc('kumitex_eliminar_torneo', { p_master: SECRET, p_slug: b.dataset.slug });
+      loadTorneos();
+    }));
+  }
+
+  $('torneo-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const st = $('torneo-status');
+    st.textContent = '';
+    const { data, error } = await sb.rpc('kumitex_crear_torneo', {
+      p_master: SECRET,
+      p_slug: $('t-slug').value.trim(),
+      p_nombre: $('t-nombre').value.trim(),
+      p_admin_password: $('t-pass').value
+    });
+    if(error || !data || data.ok !== true){
+      const e2 = data && data.error;
+      st.textContent = e2 === 'slug_ya_existe' ? 'Ese identificador ya existe.'
+        : e2 === 'slug_invalido' ? 'Identificador inválido (solo minúsculas, números y guiones).'
+        : e2 === 'clave_corta' ? 'La contraseña necesita mínimo 8 caracteres.'
+        : 'Error al crear.';
+      st.style.color = 'var(--accent-2)';
+      return;
+    }
+    st.textContent = '✓ Torneo creado'; st.style.color = 'var(--ok)';
+    setTimeout(() => st.textContent = '', 2500);
+    $('torneo-form').reset();
+    loadTorneos();
   });
 
   // ═══ Cambiar contraseña ═══
