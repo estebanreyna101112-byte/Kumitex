@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Promo — Kumitex</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --surface:#161719;
+    --surface-2:#1d1e21;
+    --border:#2a2b2f;
+    --text:#f5f4f2;
+    --dim:#a6a7ac;
+    --faint:#6d6e73;
+    --accent:#e2262e;
+    --accent-2:#ff4a52;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:#000;color:var(--text);font-family:'Inter',sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    overflow:hidden;
+  }
+  .display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ══ Escenario 16:9 ══ */
+  #stage{
+    position:relative;overflow:hidden;background:var(--bg);
+    width:min(100vw, calc(100vh * 16 / 9));
+    aspect-ratio:16/9;
+  }
+  .grid-bg{
+    position:absolute;inset:0;opacity:.35;
+    background-image:
+      linear-gradient(rgba(245,244,242,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,244,242,.05) 1px, transparent 1px);
+    background-size:44px 44px;
+  }
+  .glow{
+    position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at 50% 15%, rgba(226,38,46,.16), transparent 55%);
+  }
+
+  .escena{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+    opacity:0;visibility:hidden;transition:opacity .55s ease;
+    padding:4%;
+  }
+  .escena.on{opacity:1;visibility:visible;}
+  .escena.off{opacity:0;}
+
+  /* elementos que entran escalonados */
+  .paso{opacity:0;transform:translateY(26px);transition:opacity .6s cubic-bezier(.2,.7,.2,1), transform .6s cubic-bezier(.2,.7,.2,1);}
+  .escena.on .paso{opacity:1;transform:translateY(0);}
+  .escena.on .d1{transition-delay:.15s;}
+  .escena.on .d2{transition-delay:.45s;}
+  .escena.on .d3{transition-delay:.75s;}
+  .escena.on .d4{transition-delay:1.05s;}
+  .escena.on .d5{transition-delay:1.35s;}
+  .escena.on .d6{transition-delay:1.65s;}
+  .escena.on .d7{transition-delay:1.95s;}
+
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-.02em;line-height:1.06;}
+  .t-xl{font-size:min(7.2vw, 4.6em);}
+  .t-lg{font-size:min(5.4vw, 3.4em);}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:min(1.6vw,1em);text-transform:uppercase;
+    letter-spacing:.22em;color:var(--accent-2);
+  }
+  .sub{color:var(--dim);font-size:min(2.3vw,1.35em);max-width:34em;}
+
+  /* ── E1: logo ── */
+  #logo-anim path{stroke-dasharray:300;stroke-dashoffset:300;}
+  .escena.on #logo-anim .p1{animation:trazo 1s .2s cubic-bezier(.4,0,.2,1) forwards;}
+  .escena.on #logo-anim .p2{animation:trazo 1s .55s cubic-bezier(.4,0,.2,1) forwards;}
+  .escena.on #logo-anim .p3{animation:trazo 1s .9s cubic-bezier(.4,0,.2,1) forwards;}
+  @keyframes trazo{to{stroke-dashoffset:0;}}
+  #marca{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:min(8vw,5em);
+    letter-spacing:.04em;display:flex;
+  }
+  #marca span{opacity:0;transform:translateY(.4em);display:inline-block;}
+  .escena.on #marca span{animation:letra .5s cubic-bezier(.2,.7,.2,1) forwards;}
+  @keyframes letra{to{opacity:1;transform:translateY(0);}}
+
+  /* ── E2: problema ── */
+  .tachado{position:relative;display:inline-block;}
+  .tachado::after{
+    content:'';position:absolute;left:-4%;top:52%;height:.09em;width:0;
+    background:var(--accent);transform:rotate(-2deg);
+  }
+  .escena.on .paso.d2.tachado::after{animation:tachar .45s 1.5s ease forwards;}
+  .escena.on .paso.d3.tachado::after{animation:tachar .45s 2.1s ease forwards;}
+  .escena.on .paso.d4.tachado::after{animation:tachar .45s 2.7s ease forwards;}
+  @keyframes tachar{to{width:108%;}}
+  .caos{color:var(--dim);}
+
+  /* ── E3: features ── */
+  .chips{display:flex;flex-wrap:wrap;gap:min(1.4vw,12px);justify-content:center;max-width:80%;}
+  .chip{
+    border:1px solid var(--border);background:var(--surface);border-radius:99px;
+    padding:min(1.2vw,10px) min(2.2vw,20px);font-size:min(2vw,1.1em);font-weight:500;
+    display:flex;align-items:center;gap:.5em;
+  }
+  .chip .pto{width:.45em;height:.45em;border-radius:50%;background:var(--accent);}
+
+  /* ── E4: llave ── */
+  #br-svg{width:min(72%, 900px);}
+  #br-svg line{stroke:var(--border);stroke-width:2;stroke-dasharray:400;stroke-dashoffset:400;}
+  #br-svg line.win{stroke:var(--accent);}
+  .escena.on #br-svg line{animation:trazo .7s forwards;}
+  .escena.on #br-svg .l1{animation-delay:.2s;}
+  .escena.on #br-svg .l2{animation-delay:.45s;}
+  .escena.on #br-svg .l3{animation-delay:.7s;}
+  .escena.on #br-svg .l4{animation-delay:.95s;}
+  .escena.on #br-svg .l5{animation-delay:1.3s;}
+  .escena.on #br-svg .l6{animation-delay:1.55s;}
+  .escena.on #br-svg .l7{animation-delay:1.9s;}
+  #br-svg text{font-family:'Inter',sans-serif;font-size:15px;fill:var(--text);opacity:0;}
+  #br-svg text.org{font-size:10.5px;fill:var(--faint);}
+  #br-svg text.num{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent-2);}
+  .escena.on #br-svg text{animation:aparece .4s forwards;}
+  .escena.on #br-svg .t1{animation-delay:.5s;}
+  .escena.on #br-svg .t2{animation-delay:.75s;}
+  .escena.on #br-svg .t3{animation-delay:1.5s;}
+  .escena.on #br-svg .t4{animation-delay:2.2s;}
+  @keyframes aparece{to{opacity:1;}}
+
+  /* ── E5: en vivo ── */
+  .stats{display:flex;gap:min(3vw,34px);}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:min(2vw,18px) min(3vw,30px);}
+  .stat .k{font-family:'JetBrains Mono',monospace;font-size:min(1.3vw,.72em);text-transform:uppercase;letter-spacing:.14em;color:var(--faint);}
+  .stat .v{font-family:'Space Grotesk',sans-serif;font-size:min(4.5vw,2.6em);font-weight:700;font-variant-numeric:tabular-nums;}
+  .live-dot{
+    display:inline-flex;align-items:center;gap:.5em;
+    font-family:'JetBrains Mono',monospace;font-size:min(1.6vw,.9em);letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent-2);
+  }
+  .live-dot i{width:.55em;height:.55em;border-radius:50%;background:var(--accent);animation:pulso 1.6s infinite;}
+  @keyframes pulso{
+    0%{box-shadow:0 0 0 0 rgba(226,38,46,.55);}
+    70%{box-shadow:0 0 0 10px rgba(226,38,46,0);}
+    100%{box-shadow:0 0 0 0 rgba(226,38,46,0);}
+  }
+
+  /* ── E6: marca propia ── */
+  .paleta{display:flex;gap:min(1.6vw,14px);}
+  .sw{width:min(5vw,44px);height:min(5vw,44px);border-radius:10px;border:1px solid var(--border);transition:transform .3s ease;}
+  .sw.onda{animation:salta .5s ease;}
+  @keyframes salta{50%{transform:translateY(-10px) scale(1.08);}}
+
+  /* ── E7: CTA ── */
+  .url{
+    font-family:'JetBrains Mono',monospace;font-size:min(2.4vw,1.3em);color:var(--accent-2);
+    border:1px solid var(--border);border-radius:10px;padding:.6em 1.4em;background:var(--surface);
+  }
+
+  /* barra de progreso del "video" */
+  #barra{position:absolute;left:0;bottom:0;height:3px;background:var(--accent);width:0%;z-index:5;}
+
+  /* controles fuera del escenario */
+  #controles{display:flex;gap:12px;align-items:center;color:var(--faint);font-size:12.5px;font-family:'JetBrains Mono',monospace;}
+  #controles button{
+    background:var(--accent);border:none;color:#fff;border-radius:8px;padding:9px 20px;
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  #controles button:hover{background:#c71e25;}
+  @media (prefers-reduced-motion: reduce){
+    .paso,.escena{transition-duration:.01s !important;}
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div class="grid-bg"></div>
+  <div class="glow"></div>
+  <div id="barra"></div>
+
+  <!-- E1 · Marca -->
+  <section class="escena" id="e1">
+    <svg id="logo-anim" viewBox="0 0 96 96" width="17%" fill="none" style="margin-bottom:2%;">
+      <path class="p1" d="M21 13 V83" stroke="#e2262e" stroke-width="13" stroke-linecap="round"/>
+      <path class="p2" d="M81 13 H57 V41.5 H27.5" stroke="#e2262e" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+      <path class="p3" d="M81 83 H57 V54.5 H27.5" stroke="#e2262e" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div id="marca"></div>
+    <p class="sub paso d5" style="margin-top:1.5%;">Infraestructura digital para torneos de karate</p>
+  </section>
+
+  <!-- E2 · Problema -->
+  <section class="escena" id="e2">
+    <p class="eyebrow paso d1" style="margin-bottom:2.5%;">¿Te suena?</p>
+    <h1 class="t-lg caos">
+      <span class="paso d2 tachado">Planillas de Excel.</span><br>
+      <span class="paso d3 tachado">Llaves a mano.</span><br>
+      <span class="paso d4 tachado">Caos el día del torneo.</span>
+    </h1>
+  </section>
+
+  <!-- E3 · Solución -->
+  <section class="escena" id="e3">
+    <h1 class="t-xl paso d1" style="margin-bottom:3%;">Una sola<br>plataforma.</h1>
+    <div class="chips">
+      <span class="chip paso d2"><i class="pto"></i>Inscripciones</span>
+      <span class="chip paso d3"><i class="pto"></i>Categorías con filtros</span>
+      <span class="chip paso d4"><i class="pto"></i>Llaves automáticas</span>
+      <span class="chip paso d5"><i class="pto"></i>Kata por rondas</span>
+      <span class="chip paso d6"><i class="pto"></i>Programa por tatami</span>
+      <span class="chip paso d7"><i class="pto"></i>Resultados en vivo</span>
+    </div>
+  </section>
+
+  <!-- E4 · Llave -->
+  <section class="escena" id="e4">
+    <p class="eyebrow paso d1" style="margin-bottom:2%;">Las llaves se arman solas</p>
+    <svg id="br-svg" viewBox="0 0 900 380">
+      <text class="num t1" x="60" y="60">COMBATE Nº 1 · TATAMI 1</text>
+      <text class="t1" x="60" y="92" font-weight="600">Matías Fuentes</text>
+      <text class="org t1" x="60" y="110">Dojo Central</text>
+      <text class="t1" x="60" y="152">Benjamín Araya</text>
+      <text class="org t1" x="60" y="170">Club Norte</text>
+      <text class="num t2" x="60" y="240">COMBATE Nº 2 · TATAMI 1</text>
+      <text class="t2" x="60" y="272" font-weight="600">Diego Castillo</text>
+      <text class="org t2" x="60" y="290">Kyokushin La Serena</text>
+      <text class="t2" x="60" y="332">Lucas Miranda</text>
+      <text class="org t2" x="60" y="350">Club Pacífico</text>
+      <line class="l1" x1="290" y1="88" x2="360" y2="88"/>
+      <line class="l2" x1="290" y1="148" x2="360" y2="148"/>
+      <line class="l3 win" x1="360" y1="88" x2="360" y2="118"/>
+      <line class="l3" x1="360" y1="148" x2="360" y2="118"/>
+      <line class="l4 win" x1="360" y1="118" x2="440" y2="118"/>
+      <line class="l1" x1="290" y1="268" x2="360" y2="268"/>
+      <line class="l2" x1="290" y1="328" x2="360" y2="328"/>
+      <line class="l3" x1="360" y1="268" x2="360" y2="298"/>
+      <line class="l3 win" x1="360" y1="328" x2="360" y2="298"/>
+      <line class="l4 win" x1="360" y1="298" x2="440" y2="298"/>
+      <text class="t3" x="452" y="124" font-weight="600">Matías Fuentes</text>
+      <text class="t3" x="452" y="304" font-weight="600">Lucas Miranda</text>
+      <line class="l5 win" x1="640" y1="118" x2="700" y2="118"/>
+      <line class="l5" x1="640" y1="298" x2="700" y2="298"/>
+      <line class="l6 win" x1="700" y1="118" x2="700" y2="208"/>
+      <line class="l6" x1="700" y1="298" x2="700" y2="208"/>
+      <line class="l7 win" x1="700" y1="208" x2="770" y2="208"/>
+      <text class="t4" x="782" y="200" font-weight="700" style="fill:#ff4a52;font-size:17px;">CAMPEÓN</text>
+      <text class="t4" x="782" y="222" font-weight="600">Matías Fuentes</text>
+    </svg>
+  </section>
+
+  <!-- E5 · En vivo -->
+  <section class="escena" id="e5">
+    <p class="live-dot paso d1" style="margin-bottom:2.5%;"><i></i> El público lo sigue en vivo</p>
+    <div class="stats paso d2" style="margin-bottom:3%;">
+      <div class="stat"><div class="k">Inscritos</div><div class="v" data-n="50">0</div></div>
+      <div class="stat"><div class="k">Categorías</div><div class="v" data-n="8">0</div></div>
+      <div class="stat"><div class="k">Clubes</div><div class="v" data-n="10">0</div></div>
+      <div class="stat"><div class="k">Países</div><div class="v" data-n="5">0</div></div>
+    </div>
+    <p class="sub paso d3">Llaves, resultados, medallero y programa por tatami,<br>desde cualquier teléfono.</p>
+  </section>
+
+  <!-- E6 · Marca propia -->
+  <section class="escena" id="e6">
+    <h1 class="t-lg paso d1" style="margin-bottom:2.5%;">Tu torneo. Tu marca.</h1>
+    <div class="paleta paso d2" style="margin-bottom:2.5%;" id="paleta">
+      <div class="sw" style="background:#e2262e;"></div>
+      <div class="sw" style="background:#1e66d0;"></div>
+      <div class="sw" style="background:#1e9e57;"></div>
+      <div class="sw" style="background:#c88a1c;"></div>
+      <div class="sw" style="background:#7a3fd1;"></div>
+    </div>
+    <p class="sub paso d3">Tu logo, tus colores y tu portada.<br>Cada torneo con su propia página.</p>
+  </section>
+
+  <!-- E7 · CTA -->
+  <section class="escena" id="e7">
+    <svg viewBox="0 0 96 96" width="9%" fill="none" class="paso d1" style="margin-bottom:2%;">
+      <path d="M21 13 V83" stroke="#e2262e" stroke-width="13" stroke-linecap="round"/>
+      <path d="M81 13 H57 V41.5 H27.5" stroke="#e2262e" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M81 83 H57 V54.5 H27.5" stroke="#e2262e" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1 class="t-lg paso d2" style="margin-bottom:1.5%;">Crea tu cuenta y arma<br>tu primer torneo en minutos.</h1>
+    <p class="sub paso d3" style="margin-bottom:3%;">Publica cuando estés listo.</p>
+    <div class="url paso d4">kumitex-4ulo.onrender.com</div>
+  </section>
+</div>
+
+<div id="controles">
+  <button id="replay">Reproducir de nuevo</button>
+  <span>35 s · pantalla completa con F11 · graba con Win+Alt+R u OBS</span>
+</div>
+
+<script>
+  // ═══ Guion: escena → duración (ms) ═══
+  const GUION = [
+    ['e1', 5200],
+    ['e2', 5600],
+    ['e3', 5600],
+    ['e4', 6800],
+    ['e5', 5600],
+    ['e6', 4600],
+    ['e7', 6000]
+  ];
+  const TOTAL = GUION.reduce((s, g) => s + g[1], 0);
+  let timers = [];
+
+  function limpiar(){
+    timers.forEach(t => clearTimeout(t));
+    timers = [];
+    document.querySelectorAll('.escena').forEach(e => e.classList.remove('on'));
+  }
+
+  function marca(){
+    const el = document.getElementById('marca');
+    el.innerHTML = 'KUMITEX'.split('').map((l, i) =>
+      `<span style="animation-delay:${1.15 + i * 0.07}s">${l}</span>`).join('');
+  }
+
+  function contadores(){
+    document.querySelectorAll('#e5 .v').forEach(v => {
+      const fin = parseInt(v.dataset.n, 10);
+      const dur = 1400, t0 = performance.now();
+      const tick = (now) => {
+        const p = Math.min((now - t0) / dur, 1);
+        v.textContent = Math.floor((1 - Math.pow(1 - p, 3)) * fin);
+        if(p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  function paleta(){
+    const sws = document.querySelectorAll('#paleta .sw');
+    sws.forEach((s, i) => timers.push(setTimeout(() => s.classList.add('onda'), 900 + i * 160)));
+  }
+
+  function reproducir(){
+    limpiar();
+    marca();
+    const barra = document.getElementById('barra');
+    barra.style.transition = 'none';
+    barra.style.width = '0%';
+    setTimeout(() => {
+      barra.style.transition = `width ${TOTAL}ms linear`;
+      barra.style.width = '100%';
+    }, 60);
+
+    let t = 0;
+    GUION.forEach(([id, dur], idx) => {
+      timers.push(setTimeout(() => {
+        document.querySelectorAll('.escena').forEach(e => e.classList.remove('on'));
+        const esc = document.getElementById(id);
+        // reinicia animaciones internas
+        esc.classList.remove('on');
+        void esc.offsetWidth;
+        esc.classList.add('on');
+        if(id === 'e5') timers.push(setTimeout(contadores, 700));
+        if(id === 'e6') paleta();
+      }, t));
+      t += dur;
+    });
+  }
+
+  document.getElementById('replay').addEventListener('click', reproducir);
+  reproducir();
+</script>
+
+</body>
+</html>
