@@ -121,6 +121,59 @@
   .search input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:#fff;outline:none;}
   .search input:focus{border-color:var(--accent-2);}
 
+  /* ── Modal de evaluación de kata ── */
+  #kata-modal{display:none;position:fixed;inset:0;z-index:60;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;}
+  #kata-modal.open{display:flex;}
+  #kata-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);}
+  .kata-shell{
+    position:relative;width:100%;max-width:640px;background:var(--surface);
+    border:1px solid var(--border);border-radius:14px;overflow:hidden;
+  }
+  .kata-head{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:16px 20px;border-bottom:1px solid var(--border);
+    position:sticky;top:0;background:var(--surface);z-index:2;
+  }
+  .kata-head h3{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;}
+  .kata-close{background:none;border:none;color:var(--text-faint);font-size:22px;cursor:pointer;line-height:1;padding:4px 8px;}
+  .kata-close:hover{color:#fff;}
+  .kata-body{padding:18px 20px 22px;}
+  .ronda{border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden;}
+  .ronda-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);
+    font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);
+  }
+  .ronda-head .actual{color:var(--accent-2);}
+  .krow{
+    display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);
+    font-size:14px;flex-wrap:wrap;
+  }
+  .krow:last-child{border-bottom:none;}
+  .krow .knm{flex:1;min-width:140px;font-weight:500;}
+  .krow .korg{font-size:11px;color:var(--text-faint);display:block;font-weight:400;}
+  .krow input.kp{
+    width:84px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
+    padding:7px 10px;font-size:14px;color:#fff;outline:none;text-align:center;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .krow input.kp:focus{border-color:var(--accent-2);}
+  .krow label.kav{
+    display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text-dim);
+    cursor:pointer;user-select:none;border:1px solid var(--border);border-radius:6px;padding:7px 10px;
+  }
+  .krow label.kav input{accent-color:var(--accent);}
+  .krow label.kav.on{border-color:var(--accent);color:var(--accent-2);background:var(--accent-soft);}
+  .krow .kro{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);}
+  .kata-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+  .podio-box{
+    border:1px solid rgba(62,207,110,.35);border-radius:10px;padding:16px;margin-bottom:14px;
+    background:rgba(62,207,110,.06);
+  }
+  .podio-line{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:15px;}
+  .podio-line .medal{font-size:20px;width:28px;text-align:center;}
+  .podio-line .pp{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-dim);}
+
   @media(max-width:640px){
     .fg-2,.fg-3,.fg-4{grid-template-columns:1fr;}
     .stat-row{grid-template-columns:1fr 1fr;}
@@ -155,6 +208,7 @@
         </div>
         <div class="top-actions">
           <a class="top-link hide-sm" id="link-publico" target="_blank" rel="noopener">Ver página pública ↗</a>
+          <a class="top-link hide-sm" id="link-prueba" target="_blank" rel="noopener" style="color:var(--accent-2);">Modo prueba ↗</a>
           <button class="top-link" id="logout-btn">Salir</button>
         </div>
       </div>
@@ -298,6 +352,18 @@
   </main>
 </div>
 
+<!-- ════ MODAL: EVALUACIÓN DE KATA ════ -->
+<div id="kata-modal">
+  <div id="kata-backdrop"></div>
+  <div class="kata-shell">
+    <div class="kata-head">
+      <h3 id="kata-title">Evaluación de kata</h3>
+      <button class="kata-close" id="kata-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="kata-body" id="kata-body"></div>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
@@ -365,6 +431,7 @@
     $('torneo-nombre').textContent = TORNEO.nombre;
     document.title = `${TORNEO.nombre} — Panel`;
     $('link-publico').href = `torneo.html?t=${SLUG}`;
+    $('link-prueba').href = `torneo.html?t=${SLUG}&prueba=1`;
     renderComps();
     renderCats();
     renderAjustes();
@@ -493,6 +560,7 @@
           <div class="meta">${catFiltroTxt(k)} · <strong>${n} inscrito${n === 1 ? '' : 's'}</strong></div>
         </div>
         <div class="acts">
+          ${k.tipo === 'kata' ? '<button class="btn btn-sm btn-primary k-kata">Evaluar kata</button>' : ''}
           <button class="btn btn-sm btn-ghost k-auto">Auto-asignar</button>
           <button class="btn btn-sm btn-ghost k-pub">${k.estado === 'publicada' ? 'Ocultar' : 'Publicar'}</button>
           <button class="btn btn-sm btn-danger k-del">×</button>
@@ -518,6 +586,7 @@
         await exec('cat_delete', { id });
         await loadAll();
       });
+      card.querySelector('.k-kata')?.addEventListener('click', () => openKata(id));
     });
   }
 
@@ -538,6 +607,184 @@
     $('cat-form').reset();
     await loadAll();
   });
+
+  // ═══ Evaluación de kata ═══
+  // Estructura guardada en categoria.llave:
+  // { rondas: [ [ {cid, p, a}, ... ], ... ], finalizada: bool, podio: [{cid, lugar, p}] }
+  let KATA_ID = null;
+
+  function kataCat(){ return CATS.find(x => x.id === KATA_ID); }
+  function compNombre(cid){
+    const c = COMPS.find(x => x.id === cid);
+    return c ? c.nombre : '(eliminado)';
+  }
+  function compOrg(cid){
+    const c = COMPS.find(x => x.id === cid);
+    return c ? [c.organizacion, c.pais].filter(Boolean).join(' · ') : '';
+  }
+
+  function openKata(id){
+    KATA_ID = id;
+    $('kata-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    renderKata();
+  }
+  function closeKata(){
+    $('kata-modal').classList.remove('open');
+    document.body.style.overflow = '';
+    KATA_ID = null;
+    renderCats();
+  }
+  $('kata-close').addEventListener('click', closeKata);
+  $('kata-backdrop').addEventListener('click', closeKata);
+
+  async function saveKata(llave){
+    const k = kataCat();
+    k.llave = llave;
+    const r = await exec('cat_update', { id: KATA_ID, llave });
+    if(!r.ok) alert('No se pudo guardar: ' + (r.error || ''));
+    renderKata();
+  }
+
+  function renderKata(){
+    const k = kataCat();
+    if(!k) return;
+    $('kata-title').textContent = k.nombre;
+    const inscritos = COMPS.filter(c => c.categoria_id === k.id);
+    const L = k.llave && Array.isArray(k.llave.rondas) ? k.llave : null;
+    const body = $('kata-body');
+
+    // Sin evaluación iniciada
+    if(!L){
+      body.innerHTML = `
+        <p style="font-size:14px;color:var(--text-dim);margin-bottom:16px;">
+          Hay <strong>${inscritos.length}</strong> competidor(es) en esta categoría.
+          Al iniciar, todos entran a la Ronda 1: le pones puntaje a cada uno tras ejecutar su kata
+          y marcas quiénes pasan a la siguiente ronda — tú decides cuántos.
+        </p>
+        ${inscritos.length ? '<button class="btn btn-primary" id="kata-init">Iniciar evaluación</button>'
+          : '<p style="font-size:13px;color:var(--accent-2);">Asigna competidores a la categoría antes de iniciar.</p>'}`;
+      $('kata-init')?.addEventListener('click', () => {
+        saveKata({ rondas: [inscritos.map(c => ({ cid: c.id, p: null, a: false }))], finalizada: false, podio: [] });
+      });
+      return;
+    }
+
+    let html = '';
+
+    // Podio (si está finalizada)
+    if(L.finalizada && L.podio?.length){
+      const medallas = ['🥇','🥈','🥉'];
+      html += `<div class="podio-box">
+        ${L.podio.map(p => `
+          <div class="podio-line">
+            <span class="medal">${medallas[p.lugar - 1] || p.lugar + '°'}</span>
+            <span>${esc(compNombre(p.cid))}</span>
+            <span class="pp">${p.p ?? '—'} pts</span>
+          </div>`).join('')}
+      </div>`;
+    }
+
+    // Rondas
+    L.rondas.forEach((ronda, i) => {
+      const esActual = !L.finalizada && i === L.rondas.length - 1;
+      html += `<div class="ronda">
+        <div class="ronda-head">
+          <span>Ronda ${i + 1} · ${ronda.length} participante${ronda.length === 1 ? '' : 's'}</span>
+          ${esActual ? '<span class="actual">● En curso</span>' : '<span>Cerrada</span>'}
+        </div>
+        ${ronda.map((r, j) => esActual ? `
+          <div class="krow">
+            <span class="knm">${esc(compNombre(r.cid))}<span class="korg">${esc(compOrg(r.cid))}</span></span>
+            <input type="number" class="kp" step="0.1" min="0" max="10" placeholder="0.0"
+              value="${r.p ?? ''}" data-j="${j}">
+            <label class="kav ${r.a ? 'on' : ''}"><input type="checkbox" data-j="${j}" ${r.a ? 'checked' : ''}> Avanza</label>
+          </div>` : `
+          <div class="krow">
+            <span class="knm">${esc(compNombre(r.cid))}</span>
+            <span class="kro">${r.p ?? '—'}</span>
+            <span style="font-size:12px;color:${r.a ? 'var(--ok)' : 'var(--text-faint)'};">${r.a ? '✓ avanzó' : (L.finalizada && i === L.rondas.length - 1 ? '' : 'eliminado')}</span>
+          </div>`).join('')}
+      </div>`;
+    });
+
+    // Acciones
+    const actual = L.rondas[L.rondas.length - 1];
+    const avanzan = actual.filter(r => r.a).length;
+    if(!L.finalizada){
+      html += `<div class="kata-actions">
+        <button class="btn btn-primary" id="kata-next" ${avanzan ? '' : 'disabled'}>Siguiente ronda (${avanzan}) →</button>
+        <button class="btn btn-ghost" id="kata-fin">Finalizar y calcular podio</button>
+        ${L.rondas.length > 1 ? '<button class="btn btn-ghost" id="kata-undo">← Deshacer ronda</button>' : ''}
+        <button class="btn btn-danger btn-sm" id="kata-reset" style="margin-left:auto;">Reiniciar</button>
+      </div>`;
+    } else {
+      html += `<div class="kata-actions">
+        <button class="btn btn-ghost" id="kata-reopen">Reabrir evaluación</button>
+      </div>`;
+    }
+
+    body.innerHTML = html;
+
+    // Listeners de la ronda actual
+    if(!L.finalizada){
+      body.querySelectorAll('input.kp').forEach(inp => {
+        inp.addEventListener('change', () => {
+          const j = parseInt(inp.dataset.j, 10);
+          actual[j].p = inp.value === '' ? null : parseFloat(inp.value);
+          saveKata(L);
+        });
+      });
+      body.querySelectorAll('.kav input').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const j = parseInt(chk.dataset.j, 10);
+          actual[j].a = chk.checked;
+          saveKata(L);
+        });
+      });
+      $('kata-next')?.addEventListener('click', () => {
+        const pasan = actual.filter(r => r.a);
+        if(!pasan.length) return;
+        L.rondas.push(pasan.map(r => ({ cid: r.cid, p: null, a: false })));
+        saveKata(L);
+      });
+      $('kata-fin')?.addEventListener('click', () => {
+        if(!confirm('¿Finalizar la categoría y calcular el podio con los puntajes de la última ronda?')) return;
+        L.podio = calcularPodio(L);
+        L.finalizada = true;
+        saveKata(L);
+      });
+      $('kata-undo')?.addEventListener('click', () => {
+        if(!confirm('¿Eliminar la última ronda? Se perderán sus puntajes.')) return;
+        L.rondas.pop();
+        saveKata(L);
+      });
+      $('kata-reset')?.addEventListener('click', () => {
+        if(!confirm('¿Reiniciar TODA la evaluación? Se perderán todas las rondas y puntajes.')) return;
+        saveKata(null);
+      });
+    } else {
+      $('kata-reopen')?.addEventListener('click', () => {
+        L.finalizada = false;
+        L.podio = [];
+        saveKata(L);
+      });
+    }
+  }
+
+  // 1º y 2º y 3º: mejores puntajes de la ronda final; si la final tiene menos
+  // de 3, se completa con los mejores no clasificados de rondas anteriores
+  function calcularPodio(L){
+    const porPuntaje = (a, b) => (b.p ?? -1) - (a.p ?? -1);
+    const final = [...L.rondas[L.rondas.length - 1]].sort(porPuntaje);
+    const usados = new Set(final.map(r => r.cid));
+    const resto = [];
+    for(let i = L.rondas.length - 2; i >= 0; i--){
+      const noAvanzaron = L.rondas[i].filter(r => !usados.has(r.cid) && !r.a).sort(porPuntaje);
+      noAvanzaron.forEach(r => { if(!resto.some(x => x.cid === r.cid)) resto.push(r); });
+    }
+    return [...final, ...resto].slice(0, 3).map((r, i) => ({ cid: r.cid, lugar: i + 1, p: r.p ?? null }));
+  }
 
   // ═══ Ajustes ═══
   function renderAjustes(){

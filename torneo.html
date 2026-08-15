@@ -101,6 +101,50 @@
     font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);}
   .foot-inner a:hover{color:#fff;}
 
+  /* ── Modo prueba ── */
+  .prueba-bar{
+    display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;
+    background:var(--accent);color:#fff;text-align:center;
+    font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:.14em;padding:8px 14px;
+  }
+  .gate{max-width:360px;margin:110px auto;padding:0 20px;}
+  .gate h1{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;margin-bottom:6px;}
+  .gate p{font-size:13px;color:var(--text-faint);margin-bottom:20px;}
+  .gate input{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:12px 14px;font-size:16px;color:#fff;outline:none;margin-bottom:10px;font-family:'Inter',sans-serif;
+  }
+  .gate input:focus{border-color:var(--accent-2);}
+  .gate button{
+    width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;
+    padding:13px;font-size:14px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+  .gate .err{display:none;font-size:13px;color:var(--accent-2);margin-bottom:10px;}
+
+  /* ── Kata público ── */
+  .podio-pub{
+    display:flex;flex-direction:column;gap:4px;
+    border:1px solid rgba(62,207,110,.35);border-radius:8px;padding:12px 14px;margin-bottom:10px;
+    background:rgba(62,207,110,.06);
+  }
+  .podio-pub .pl{display:flex;align-items:center;gap:10px;font-size:14px;padding:3px 0;}
+  .podio-pub .pl .m{font-size:18px;width:24px;text-align:center;}
+  .podio-pub .pl .pts{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);}
+  .ronda-pub{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
+  .ronda-pub .rh{
+    padding:7px 12px;background:var(--surface-2);border-bottom:1px solid var(--border);
+    font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);
+    display:flex;justify-content:space-between;
+  }
+  .ronda-pub .rh .live{color:var(--accent-2);}
+  .ronda-pub .rl{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-dim);}
+  .ronda-pub .rl:last-child{border-bottom:none;}
+  .ronda-pub .rl .n{color:var(--text);flex:1;}
+  .ronda-pub .rl .pts{font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .ronda-pub .rl .av{font-size:11px;color:var(--ok);}
+  .badge.draft{border-color:rgba(255,193,7,.4);color:#ffc107;}
+
   @media(max-width:560px){
     .stat-row{grid-template-columns:1fr 1fr;}
   }
@@ -108,7 +152,18 @@
 </head>
 <body>
 
+<div id="gate" class="gate" style="display:none;">
+  <h1>Modo prueba</h1>
+  <p>Vista previa de la página pública. Ingresa la contraseña de administrador del torneo.</p>
+  <form id="gate-form">
+    <input id="gate-pass" type="password" required placeholder="Contraseña" autocomplete="current-password">
+    <p class="err" id="gate-err">Contraseña incorrecta.</p>
+    <button type="submit">Ver como público</button>
+  </form>
+</div>
+
 <div id="app" style="display:none;">
+  <div class="prueba-bar" id="prueba-bar">Modo prueba · así verá el público esta página</div>
   <header class="top">
     <div class="wrap top-inner">
       <div class="brand">
@@ -171,7 +226,11 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const $ = (id) => document.getElementById(id);
 
-  const SLUG = new URLSearchParams(location.search).get('t');
+  const PARAMS = new URLSearchParams(location.search);
+  const SLUG = PARAMS.get('t');
+  const PRUEBA = PARAMS.get('prueba') === '1';
+  const SS_KEY = 'kumitex_t_' + SLUG;
+  let PRUEBA_OK = false;
   const ESTADOS = {
     preparacion: 'En preparación',
     inscripciones: 'Inscripciones abiertas',
@@ -185,11 +244,43 @@
     return d.innerHTML;
   }
 
+  // ═══ Modo prueba: requiere la contraseña de admin del torneo ═══
+  async function verificarPrueba(secret){
+    const { data } = await sb.rpc('kumitex_t_exec', {
+      p_slug: SLUG, p_secret: secret, p_action: 'verificar', p_payload: {}
+    });
+    return data && data.ok === true;
+  }
+
+  $('gate-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pass = $('gate-pass').value;
+    if(await verificarPrueba(pass)){
+      sessionStorage.setItem(SS_KEY, pass);
+      PRUEBA_OK = true;
+      $('gate').style.display = 'none';
+      load();
+    } else {
+      $('gate-err').style.display = 'block';
+    }
+  });
+
   async function load(){
     if(!SLUG){ $('not-found').style.display = 'block'; return; }
+
+    if(PRUEBA && !PRUEBA_OK){
+      const saved = sessionStorage.getItem(SS_KEY);
+      if(saved && await verificarPrueba(saved)){
+        PRUEBA_OK = true;
+      } else {
+        $('gate').style.display = 'block';
+        return;
+      }
+    }
+
     const { data: t } = await sb.from('kumitex_torneos').select('*').eq('slug', SLUG).single();
     if(!t){ $('not-found').style.display = 'block'; return; }
-    if(!t.publicado){
+    if(!t.publicado && !PRUEBA_OK){
       $('np-nombre').textContent = `"${t.nombre}" aún no está publicado`;
       $('not-public').style.display = 'block';
       return;
@@ -224,28 +315,65 @@
     $('st-org').textContent = new Set(comps.map(c => (c.organizacion || '').trim().toLowerCase()).filter(Boolean)).size;
     $('st-pais').textContent = new Set(comps.map(c => (c.pais || '').trim().toLowerCase()).filter(Boolean)).size;
 
-    const pub = cats.filter(k => k.estado === 'publicada');
+    const pub = PRUEBA_OK ? cats : cats.filter(k => k.estado === 'publicada');
     $('st-cat').textContent = pub.length;
+
+    const nombreDe = (cid) => {
+      const c = comps.find(x => x.id === cid);
+      return c ? c.nombre : '(eliminado)';
+    };
+
+    function kataHTML(k){
+      const L = k.llave;
+      if(!L || !Array.isArray(L.rondas) || !L.rondas.length) return null;
+      const medallas = ['🥇','🥈','🥉'];
+      let h = '';
+      if(L.finalizada && L.podio?.length){
+        h += `<div class="podio-pub">${L.podio.map(p => `
+          <div class="pl"><span class="m">${medallas[p.lugar - 1] || ''}</span>
+            <span>${esc(nombreDe(p.cid))}</span>
+            <span class="pts">${p.p ?? '—'} pts</span></div>`).join('')}
+        </div>`;
+      }
+      h += L.rondas.map((ronda, i) => {
+        const actual = !L.finalizada && i === L.rondas.length - 1;
+        return `<div class="ronda-pub">
+          <div class="rh"><span>Ronda ${i + 1}</span>${actual ? '<span class="live">● En curso</span>' : ''}</div>
+          ${ronda.map(r => `
+            <div class="rl">
+              <span class="n">${esc(nombreDe(r.cid))}</span>
+              <span class="pts">${r.p ?? '—'}</span>
+              ${r.a ? '<span class="av">✓ avanza</span>' : ''}
+            </div>`).join('')}
+        </div>`;
+      }).join('');
+      return h;
+    }
 
     $('cat-list').innerHTML = pub.map(k => {
       const inscritos = comps.filter(c => c.categoria_id === k.id);
+      const kata = k.tipo === 'kata' ? kataHTML(k) : null;
       return `
       <details class="cat">
         <summary>
-          <span class="cat-nm">${esc(k.nombre)} <span class="badge tipo">${k.tipo}</span></span>
+          <span class="cat-nm">${esc(k.nombre)} <span class="badge tipo">${k.tipo}</span>
+            ${PRUEBA_OK && k.estado !== 'publicada' ? '<span class="badge draft">borrador · no visible</span>' : ''}
+            ${k.tipo === 'kata' && k.llave?.finalizada ? '<span class="badge" style="border-color:rgba(62,207,110,.4);color:var(--ok);">finalizada</span>' : ''}
+          </span>
           <span class="cat-n">${inscritos.length} inscrito${inscritos.length === 1 ? '' : 's'} ▾</span>
         </summary>
         <div class="cat-body">
-          ${inscritos.length ? inscritos.map(c => `
+          ${kata ? kata : (inscritos.length ? inscritos.map(c => `
             <div class="comp-line">
               <span class="nm">${esc(c.nombre)}</span>
               <span class="org">${esc([c.organizacion, c.pais].filter(Boolean).join(' · '))}</span>
-            </div>`).join('') : '<p style="color:var(--text-faint);font-size:13px;padding:8px 0;">Aún sin inscritos.</p>'}
+            </div>`).join('') : '<p style="color:var(--text-faint);font-size:13px;padding:8px 0;">Aún sin inscritos.</p>')}
         </div>
       </details>`;
     }).join('');
     $('cat-empty').style.display = pub.length ? 'none' : 'block';
 
+    if(PRUEBA_OK) $('prueba-bar').style.display = 'block';
     $('app').style.display = 'block';
   }
 
