@@ -335,26 +335,42 @@
     const list = $('torneos-list');
     if(!data || !data.length){ list.innerHTML = '<p class="text-sm text-[var(--text-faint)]">Aún no hay torneos creados.</p>'; return; }
     const fmtCLP = (n) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(n);
+    const peso = (t) => t.pago?.estado === 'solicitado' ? 0 : (t.pago?.estado === 'aprobado' ? 2 : 1);
+    data.sort((a, b) => peso(a) - peso(b));
     list.innerHTML = data.map(t => {
-      const pagado = t.pago?.estado === 'aprobado';
+      const est = t.pago?.estado || 'pendiente';
+      const badge = est === 'aprobado'
+        ? '<span class="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border ml-1 text-[var(--ok)]" style="border-color:rgba(62,207,110,.4);">publicación activa</span>'
+        : est === 'solicitado'
+        ? '<span class="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full ml-1 text-white" style="background:var(--accent);">● solicitud pendiente</span>'
+        : '<span class="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border ml-1 text-[var(--text-faint)]" style="border-color:var(--border);">sin publicar</span>';
+      const detalle = est === 'aprobado' && t.pago?.monto ? ' · ' + fmtCLP(t.pago.monto) + ' (' + (t.pago.inscritos_cubiertos ?? 0) + ' insc.)'
+        : est === 'solicitado' ? ' · solicitó con ' + (t.pago.inscritos ?? '?') + ' inscritos' : '';
+      const botones = est === 'aprobado'
+        ? `<button data-slug="${t.slug}" class="torneo-revocar btn-ghost px-3 py-1.5 text-xs rounded-md">Revocar</button>`
+        : est === 'solicitado'
+        ? `<button data-slug="${t.slug}" class="torneo-activar btn-primary px-3 py-1.5 text-xs rounded-md">Aceptar solicitud</button>
+           <button data-slug="${t.slug}" class="torneo-rechazar btn-ghost px-3 py-1.5 text-xs rounded-md">Rechazar</button>`
+        : `<button data-slug="${t.slug}" class="torneo-activar btn-ghost px-3 py-1.5 text-xs rounded-md">Habilitar publicación</button>`;
       return `
-      <div class="flex items-center justify-between gap-3 flex-wrap border hairline rounded-lg px-4 py-3 bg-[var(--surface-2)]">
+      <div class="flex items-center justify-between gap-3 flex-wrap border hairline rounded-lg px-4 py-3 bg-[var(--surface-2)]" ${est === 'solicitado' ? 'style="border-color:rgba(226,38,46,.5);"' : ''}>
         <div>
-          <p class="font-semibold text-sm">${t.nombre}
-            <span class="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border ml-1 ${pagado ? 'text-[var(--ok)]' : 'text-[#ffc107]'}" style="border-color:${pagado ? 'rgba(62,207,110,.4)' : 'rgba(255,193,7,.4)'};">${pagado ? 'pago activo' : 'pago pendiente'}</span>
-          </p>
-          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-0.5">${t.slug} · ${t.estado} · ${t.publicado ? 'publicado' : 'oculto'}${pagado && t.pago?.monto ? ' · ' + fmtCLP(t.pago.monto) + ' (' + (t.pago.inscritos_cubiertos ?? 0) + ' insc.)' : ''}</p>
+          <p class="font-semibold text-sm">${t.nombre} ${badge}</p>
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-0.5">${t.slug} · ${t.estado} · ${t.publicado ? 'publicado' : 'oculto'}${detalle}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          ${pagado
-            ? `<button data-slug="${t.slug}" class="torneo-revocar btn-ghost px-3 py-1.5 text-xs rounded-md">Revocar pago</button>`
-            : `<button data-slug="${t.slug}" class="torneo-activar btn-primary px-3 py-1.5 text-xs rounded-md">Activar publicación</button>`}
+          ${botones}
           <a href="torneo.html?t=${t.slug}" target="_blank" rel="noopener" class="btn-ghost px-3 py-1.5 text-xs rounded-md">Pública ↗</a>
           <a href="torneo-admin.html?t=${t.slug}" target="_blank" rel="noopener" class="btn-ghost px-3 py-1.5 text-xs rounded-md">Panel ↗</a>
           <button data-slug="${t.slug}" class="torneo-del font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] hover:text-[var(--accent-2)] transition-colors px-2">Eliminar</button>
         </div>
       </div>`;
     }).join('');
+    list.querySelectorAll('.torneo-rechazar').forEach(b => b.addEventListener('click', async () => {
+      if(!confirm(`¿Rechazar la solicitud de "${b.dataset.slug}"? El cliente podrá volver a solicitar.`)) return;
+      await sb.rpc('kumitex_pago_torneo', { p_master: SECRET, p_slug: b.dataset.slug, p_accion: 'rechazar' });
+      loadTorneos();
+    }));
     list.querySelectorAll('.torneo-del').forEach(b => b.addEventListener('click', async () => {
       if(!confirm(`¿Eliminar el torneo "${b.dataset.slug}" y TODOS sus datos (competidores, categorías)? Esta acción no se puede deshacer.`)) return;
       await sb.rpc('kumitex_eliminar_torneo', { p_master: SECRET, p_slug: b.dataset.slug });
