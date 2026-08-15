@@ -213,6 +213,26 @@
   .br-warn{font-size:12px;color:#ffc107;margin-bottom:12px;}
   .swap-on{border-color:var(--accent) !important;color:var(--accent-2) !important;}
 
+  /* ── Tutorial guiado ── */
+  #tour-overlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.65);display:none;}
+  #tour-ring{
+    position:fixed;z-index:81;border:2px solid var(--accent);border-radius:12px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.65);pointer-events:none;display:none;
+    transition:left .3s ease, top .3s ease, width .3s ease, height .3s ease;
+  }
+  #tour-card{
+    position:fixed;z-index:82;left:50%;transform:translateX(-50%);bottom:22px;
+    width:min(440px, calc(100vw - 24px));background:var(--surface);
+    border:1px solid var(--border);border-radius:14px;padding:20px;display:none;
+    box-shadow:0 20px 50px rgba(0,0,0,.55);
+  }
+  #tour-n{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent-2);}
+  #tour-title{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin:6px 0 6px;}
+  #tour-text{font-size:13.5px;color:var(--text-dim);line-height:1.55;margin-bottom:16px;}
+  .tour-btns{display:flex;gap:8px;align-items:center;}
+  #tour-skip{margin-left:auto;background:none;border:none;color:var(--text-faint);font-size:12px;cursor:pointer;text-decoration:underline;}
+  #tour-skip:hover{color:var(--text);}
+
   /* ── Tatamis ── */
   .tat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;align-items:start;}
   .tat-col{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
@@ -295,6 +315,7 @@
           </div>
         </div>
         <div class="top-actions">
+          <button class="top-link hide-sm" id="tour-abrir">Tutorial</button>
           <a class="top-link hide-sm" id="link-publico" target="_blank" rel="noopener">Ver página pública ↗</a>
           <a class="top-link hide-sm" id="link-prueba" target="_blank" rel="noopener" style="color:var(--accent-2);">Modo prueba ↗</a>
           <button class="top-link" id="logout-btn">Salir</button>
@@ -474,6 +495,20 @@
     </section>
 
   </main>
+</div>
+
+<!-- ════ TUTORIAL GUIADO ════ -->
+<div id="tour-overlay"></div>
+<div id="tour-ring"></div>
+<div id="tour-card">
+  <span id="tour-n"></span>
+  <h4 id="tour-title"></h4>
+  <p id="tour-text"></p>
+  <div class="tour-btns">
+    <button class="btn btn-ghost btn-sm" id="tour-back">← Atrás</button>
+    <button class="btn btn-primary btn-sm" id="tour-next">Siguiente →</button>
+    <button id="tour-skip">Saltar tutorial</button>
+  </div>
 </div>
 
 <!-- ════ MODAL: EVALUACIÓN DE KATA ════ -->
@@ -1577,10 +1612,88 @@
     return d.innerHTML;
   }
 
+  // ═══ Tutorial guiado (primera vez, con opción de saltar) ═══
+  const TOUR_KEY = 'kumitex_tour_visto';
+  let TOUR_I = -1;
+  const TOUR_STEPS = [
+    { title: '¡Bienvenido a tu panel! 🥋',
+      text: 'Aquí administras todo tu torneo: inscripciones, categorías, llaves y el programa del día. Te mostramos cómo en 1 minuto — puedes saltarlo cuando quieras.' },
+    { tab: 'inscripciones', target: '#comp-form',
+      title: '1 · Inscribe a tus competidores',
+      text: 'Nombre, sexo, edad, peso y club. Quedan en la lista de abajo, donde puedes buscarlos, editarlos y asignarlos a una o varias categorías.' },
+    { tab: 'categorias', target: '#cat-form',
+      title: '2 · Crea tus categorías',
+      text: 'Kumite o kata, con filtros de sexo, edad y peso. El botón "Auto-asignar" mete de una vez a todos los inscritos que calzan con los filtros.' },
+    { tab: 'categorias', target: '#cat-list',
+      title: '3 · Genera las llaves',
+      text: 'En cada categoría: "Llave" para kumite (sorteo automático con BYEs, o ármala arrastrando) y "Evaluar kata" para puntuar por rondas. Los podios se calculan solos.' },
+    { tab: 'tatamis', target: '#tat-cols',
+      title: '4 · Ordena el día del torneo',
+      text: 'Asigna cada categoría a un tatami y ponle orden: ese es el programa que verá el público. Desde aquí también imprimes las llaves y planillas en PDF.' },
+    { tab: 'ajustes', target: '#a-publicado',
+      title: '5 · Publica cuando estés listo',
+      text: 'Completa los datos, sube tu logo, elige tu color, y cambia "Página pública" a Publicada. Puedes despublicar cuando quieras.' },
+    { target: '#link-prueba',
+      title: '6 · Revisa antes con el modo prueba',
+      text: 'Este enlace te muestra tu página exactamente como la verá el público el día del torneo, aunque aún no esté publicada. ¡Eso es todo — éxito en tu torneo!' }
+  ];
+
+  function tourPos(){
+    if(TOUR_I < 0) return;
+    const s = TOUR_STEPS[TOUR_I];
+    const ring = $('tour-ring');
+    const t = s.target ? document.querySelector(s.target) : null;
+    if(t){
+      const r = t.getBoundingClientRect();
+      ring.style.display = 'block';
+      $('tour-overlay').style.display = 'none';
+      ring.style.left = (r.left - 8) + 'px';
+      ring.style.top = (r.top - 8) + 'px';
+      ring.style.width = (r.width + 16) + 'px';
+      ring.style.height = (r.height + 16) + 'px';
+    } else {
+      ring.style.display = 'none';
+      $('tour-overlay').style.display = 'block';
+    }
+  }
+
+  function tourGo(i){
+    if(i >= TOUR_STEPS.length){ tourEnd(); return; }
+    if(i < 0) i = 0;
+    TOUR_I = i;
+    const s = TOUR_STEPS[i];
+    if(s.tab) document.querySelector(`.tab[data-view="${s.tab}"]`).click();
+    $('tour-card').style.display = 'block';
+    $('tour-n').textContent = `Paso ${i + 1} de ${TOUR_STEPS.length}`;
+    $('tour-title').textContent = s.title;
+    $('tour-text').textContent = s.text;
+    $('tour-back').style.display = i === 0 ? 'none' : 'inline-flex';
+    $('tour-next').textContent = i === TOUR_STEPS.length - 1 ? 'Terminar ✓' : 'Siguiente →';
+    const t = s.target ? document.querySelector(s.target) : null;
+    if(t) t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(tourPos, 380);
+  }
+
+  function tourEnd(){
+    localStorage.setItem(TOUR_KEY, '1');
+    TOUR_I = -1;
+    $('tour-card').style.display = 'none';
+    $('tour-ring').style.display = 'none';
+    $('tour-overlay').style.display = 'none';
+  }
+
+  $('tour-next').addEventListener('click', () => tourGo(TOUR_I + 1));
+  $('tour-back').addEventListener('click', () => tourGo(TOUR_I - 1));
+  $('tour-skip').addEventListener('click', tourEnd);
+  $('tour-abrir').addEventListener('click', () => tourGo(0));
+  window.addEventListener('scroll', tourPos, { passive: true });
+  window.addEventListener('resize', tourPos);
+
   async function enterPanel(){
     $('login-view').style.display = 'none';
     $('panel-view').style.display = 'block';
     await loadAll();
+    if(!localStorage.getItem(TOUR_KEY)) setTimeout(() => tourGo(0), 700);
   }
 
   // Sesión previa
