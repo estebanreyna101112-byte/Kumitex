@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Kumitex</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --surface:#161719;
+    --surface-2:#1d1e21;
+    --border:#2a2b2f;
+    --text:#f5f4f2;
+    --text-dim:#a6a7ac;
+    --text-faint:#6d6e73;
+    --accent:#e2262e;
+    --accent-2:#ff4a52;
+    --ok:#3ecf6e;
+  }
+  *{box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .font-display{font-family:'Space Grotesk',sans-serif;}
+  .font-mono{font-family:'JetBrains Mono',monospace;}
+  ::selection{background:var(--accent);color:#fff;}
+  .hairline{border-color:var(--border);}
+  .btn-primary{background:var(--accent);color:#fff;transition:background .25s ease;}
+  .btn-primary:hover{background:#c71e25;}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+  .btn-ghost{border:1px solid rgba(245,244,242,.25);color:var(--text);transition:border-color .25s ease;}
+  .btn-ghost:hover{border-color:rgba(245,244,242,.6);}
+  .field{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
+    padding:9px 13px;font-size:14px;color:#fff;outline:none;transition:border-color .25s ease;
+  }
+  .field::placeholder{color:var(--text-faint);}
+  .field:focus{border-color:var(--accent-2);}
+  .field-label{
+    display:block;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--text-faint);margin-bottom:7px;
+  }
+  .section-title{
+    font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--accent-2);
+  }
+  .row-del{
+    color:var(--text-faint);cursor:pointer;font-size:18px;line-height:1;padding:0 6px;
+    transition:color .2s ease;background:none;border:none;
+  }
+  .row-del:hover{color:var(--accent-2);}
+</style>
+</head>
+<body>
+
+<header class="border-b hairline">
+  <div class="max-w-3xl mx-auto px-6 h-[64px] flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-3">
+      <img src="Logo.png" alt="Kumitex" class="w-8 h-8 rounded-md object-contain bg-white/95 p-1">
+      <span class="font-display font-semibold tracking-tight">KUMITEX <span class="text-[var(--accent-2)] font-mono text-[10px] uppercase tracking-widest ml-2">Admin</span></span>
+    </a>
+    <button id="logout-btn" class="hidden font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] hover:text-white transition-colors">Cerrar sesión</button>
+  </div>
+</header>
+
+<!-- =================== LOGIN =================== -->
+<div id="login-view" class="max-w-sm mx-auto px-6 py-24">
+  <h1 class="font-display text-2xl font-semibold mb-2">Panel de administración</h1>
+  <p class="text-sm text-[var(--text-faint)] mb-8">Ingresa tu contraseña de administrador.</p>
+  <form id="login-form" class="flex flex-col gap-4">
+    <input id="login-password" type="password" required placeholder="Contraseña" class="field" autocomplete="current-password">
+    <p id="login-error" class="hidden text-xs text-[var(--accent-2)]">Contraseña incorrecta.</p>
+    <button type="submit" id="login-btn" class="btn-primary py-3 text-sm font-medium rounded-md">Ingresar</button>
+  </form>
+</div>
+
+<!-- =================== PANEL =================== -->
+<main id="panel-view" class="hidden max-w-3xl mx-auto px-6 py-12 flex flex-col gap-10">
+
+  <div>
+    <h1 class="font-display text-2xl font-semibold mb-1">Configuración de cotizaciones</h1>
+    <p class="text-sm text-[var(--text-faint)]">Los cambios se aplican de inmediato en la página de cotización.</p>
+  </div>
+
+  <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-5">
+    <p class="section-title">General</p>
+    <div class="grid sm:grid-cols-3 gap-5">
+      <div>
+        <label class="field-label" for="cfg-base">Precio base</label>
+        <input id="cfg-base" type="number" min="0" step="1000" class="field">
+      </div>
+      <div>
+        <label class="field-label" for="cfg-moneda">Moneda</label>
+        <input id="cfg-moneda" type="text" class="field" placeholder="CLP" maxlength="3">
+      </div>
+      <div>
+        <label class="field-label" for="cfg-wsp">WhatsApp (con código país)</label>
+        <input id="cfg-wsp" type="text" class="field" placeholder="56912345678">
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-4">
+    <div class="flex items-center justify-between">
+      <p class="section-title">Módulos y precios</p>
+      <button id="add-modulo" class="btn-ghost px-3 py-1.5 text-xs rounded-md">+ Agregar módulo</button>
+    </div>
+    <div id="modulos-list" class="flex flex-col gap-2.5"></div>
+  </section>
+
+  <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-4">
+    <div class="flex items-center justify-between">
+      <p class="section-title">Multiplicador por tamaño del torneo</p>
+      <button id="add-tamano" class="btn-ghost px-3 py-1.5 text-xs rounded-md">+ Agregar rango</button>
+    </div>
+    <p class="text-xs text-[var(--text-faint)] -mt-2">El total se multiplica por este factor según el rango elegido (1 = sin ajuste).</p>
+    <div id="tamanos-list" class="flex flex-col gap-2.5"></div>
+  </section>
+
+  <div class="flex items-center gap-4">
+    <button id="save-btn" class="btn-primary px-8 py-3 text-sm font-medium rounded-md">Guardar cambios</button>
+    <span id="save-status" class="text-sm"></span>
+  </div>
+
+  <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-5">
+    <p class="section-title">Solicitudes recibidas</p>
+    <p class="text-sm text-[var(--text-dim)]">Las cotizaciones enviadas por los clientes se guardan en Supabase.</p>
+    <a href="https://supabase.com/dashboard/project/rldtkomtclolhbmrphgh/editor" target="_blank" rel="noopener" class="btn-ghost inline-flex w-fit px-5 py-2.5 text-sm rounded-md">Abrir tabla de solicitudes →</a>
+  </section>
+
+  <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-5">
+    <p class="section-title">Cambiar contraseña</p>
+    <form id="password-form" class="grid sm:grid-cols-2 gap-5">
+      <div>
+        <label class="field-label" for="pw-old">Contraseña actual</label>
+        <input id="pw-old" type="password" required class="field" autocomplete="current-password">
+      </div>
+      <div>
+        <label class="field-label" for="pw-new">Nueva contraseña (mín. 8 caracteres)</label>
+        <input id="pw-new" type="password" required minlength="8" class="field" autocomplete="new-password">
+      </div>
+      <div class="sm:col-span-2 flex items-center gap-4">
+        <button type="submit" class="btn-ghost px-5 py-2.5 text-sm rounded-md">Actualizar contraseña</button>
+        <span id="pw-status" class="text-sm"></span>
+      </div>
+    </form>
+  </section>
+
+</main>
+
+<script>
+  const SUPABASE_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  let SECRET = sessionStorage.getItem('kumitex_admin_secret') || null;
+  let CONFIG = null;
+
+  // ═══ Login ═══
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('login-btn');
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    const pass = $('login-password').value;
+    const { data, error } = await sb.rpc('kumitex_verify_admin', { p_secret: pass });
+    btn.disabled = false; btn.textContent = 'Ingresar';
+    if(error || data !== true){
+      $('login-error').classList.remove('hidden');
+      return;
+    }
+    SECRET = pass;
+    sessionStorage.setItem('kumitex_admin_secret', pass);
+    enterPanel();
+  });
+
+  $('logout-btn').addEventListener('click', () => {
+    sessionStorage.removeItem('kumitex_admin_secret');
+    location.reload();
+  });
+
+  async function enterPanel(){
+    $('login-view').classList.add('hidden');
+    $('panel-view').classList.remove('hidden');
+    $('logout-btn').classList.remove('hidden');
+    const { data, error } = await sb.from('kumitex_config').select('config').eq('id', 1).single();
+    if(error || !data){ alert('No se pudo cargar la configuración.'); return; }
+    CONFIG = data.config;
+    renderConfig();
+  }
+
+  // ═══ Render de configuración ═══
+  function moduloRow(nombre = '', precio = 0){
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2.5 modulo-row';
+    row.innerHTML = `
+      <input type="text" class="field flex-1 m-nombre" placeholder="Nombre del módulo" value="${nombre.replace(/"/g,'&quot;')}">
+      <input type="number" class="field w-36 m-precio" min="0" step="1000" value="${precio}">
+      <button type="button" class="row-del" title="Eliminar">×</button>`;
+    row.querySelector('.row-del').addEventListener('click', () => row.remove());
+    return row;
+  }
+  function tamanoRow(nombre = '', mult = 1){
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2.5 tamano-row';
+    row.innerHTML = `
+      <input type="text" class="field flex-1 t-nombre" placeholder="Ej: 100 a 300 participantes" value="${nombre.replace(/"/g,'&quot;')}">
+      <input type="number" class="field w-28 t-mult" min="0" step="0.05" value="${mult}">
+      <button type="button" class="row-del" title="Eliminar">×</button>`;
+    row.querySelector('.row-del').addEventListener('click', () => row.remove());
+    return row;
+  }
+
+  function renderConfig(){
+    $('cfg-base').value = CONFIG.precio_base ?? 0;
+    $('cfg-moneda').value = CONFIG.moneda ?? 'CLP';
+    $('cfg-wsp').value = CONFIG.whatsapp ?? '';
+    const ml = $('modulos-list'); ml.innerHTML = '';
+    Object.entries(CONFIG.modulos || {}).forEach(([n, p]) => ml.appendChild(moduloRow(n, p)));
+    const tl = $('tamanos-list'); tl.innerHTML = '';
+    Object.entries(CONFIG.tamanos || {}).forEach(([n, m]) => tl.appendChild(tamanoRow(n, m)));
+  }
+
+  $('add-modulo').addEventListener('click', () => $('modulos-list').appendChild(moduloRow()));
+  $('add-tamano').addEventListener('click', () => $('tamanos-list').appendChild(tamanoRow()));
+
+  // ═══ Guardar ═══
+  $('save-btn').addEventListener('click', async () => {
+    const modulos = {};
+    document.querySelectorAll('.modulo-row').forEach(r => {
+      const n = r.querySelector('.m-nombre').value.trim();
+      const p = parseFloat(r.querySelector('.m-precio').value);
+      if(n && !isNaN(p)) modulos[n] = p;
+    });
+    const tamanos = {};
+    document.querySelectorAll('.tamano-row').forEach(r => {
+      const n = r.querySelector('.t-nombre').value.trim();
+      const m = parseFloat(r.querySelector('.t-mult').value);
+      if(n && !isNaN(m)) tamanos[n] = m;
+    });
+    const nuevo = {
+      moneda: ($('cfg-moneda').value.trim() || 'CLP').toUpperCase(),
+      whatsapp: $('cfg-wsp').value.replace(/\D/g,''),
+      precio_base: parseFloat($('cfg-base').value) || 0,
+      modulos, tamanos
+    };
+
+    const btn = $('save-btn'), st = $('save-status');
+    btn.disabled = true; btn.textContent = 'Guardando…'; st.textContent = '';
+    const { data, error } = await sb.rpc('kumitex_update_config', { p_secret: SECRET, p_config: nuevo });
+    btn.disabled = false; btn.textContent = 'Guardar cambios';
+    if(error || data !== true){
+      st.textContent = 'Error al guardar. Vuelve a iniciar sesión.'; st.style.color = 'var(--accent-2)';
+      return;
+    }
+    CONFIG = nuevo;
+    st.textContent = '✓ Guardado'; st.style.color = 'var(--ok)';
+    setTimeout(() => st.textContent = '', 2500);
+  });
+
+  // ═══ Cambiar contraseña ═══
+  $('password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const st = $('pw-status');
+    st.textContent = '';
+    const { data, error } = await sb.rpc('kumitex_change_admin_password', {
+      p_old: $('pw-old').value, p_new: $('pw-new').value
+    });
+    if(error || data !== true){
+      st.textContent = 'No se pudo cambiar (¿contraseña actual incorrecta?).'; st.style.color = 'var(--accent-2)';
+      return;
+    }
+    SECRET = $('pw-new').value;
+    sessionStorage.setItem('kumitex_admin_secret', SECRET);
+    $('pw-old').value = ''; $('pw-new').value = '';
+    st.textContent = '✓ Contraseña actualizada'; st.style.color = 'var(--ok)';
+    setTimeout(() => st.textContent = '', 2500);
+  });
+
+  // ═══ Sesión previa ═══
+  if(SECRET){
+    sb.rpc('kumitex_verify_admin', { p_secret: SECRET }).then(({ data }) => {
+      if(data === true) enterPanel();
+      else sessionStorage.removeItem('kumitex_admin_secret');
+    });
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotiza tu plataforma — Kumitex</title>
+<meta name="description" content="Cuéntanos sobre tu torneo de karate y obtén una cotización estimada al instante.">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --bg-soft:#111113;
+    --surface:#161719;
+    --surface-2:#1d1e21;
+    --border:#2a2b2f;
+    --text:#f5f4f2;
+    --text-dim:#a6a7ac;
+    --text-faint:#6d6e73;
+    --accent:#e2262e;
+    --accent-2:#ff4a52;
+    --accent-dim:#5c161a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .font-display{font-family:'Space Grotesk',sans-serif;}
+  .font-mono{font-family:'JetBrains Mono',monospace;}
+  ::selection{background:var(--accent);color:#fff;}
+  .hairline{border-color:var(--border);}
+  .tatami-grid{
+    background-image:
+      linear-gradient(rgba(245,244,242,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,244,242,.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .noise-fade{background: radial-gradient(circle at 50% 0%, rgba(226,38,46,.14), transparent 55%);}
+  .btn-primary{
+    background:var(--accent);
+    color:#fff;
+    transition:background .25s ease, transform .25s ease;
+  }
+  .btn-primary:hover{background:#c71e25;transform:translateY(-1px);}
+  .btn-primary:disabled{opacity:.6;transform:none;cursor:not-allowed;}
+  .btn-ghost{
+    border:1px solid rgba(245,244,242,.25);
+    color:var(--text);
+    transition:border-color .25s ease, background .25s ease;
+  }
+  .btn-ghost:hover{border-color:rgba(245,244,242,.6);background:rgba(245,244,242,.04);}
+  .field{
+    width:100%;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:10px 14px;
+    font-size:14px;
+    color:#fff;
+    outline:none;
+    transition:border-color .25s ease;
+  }
+  .field::placeholder{color:var(--text-faint);}
+  .field:focus{border-color:var(--accent-2);}
+  .field-label{
+    display:block;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    color:var(--text-faint);
+    margin-bottom:8px;
+  }
+  .section-title{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    color:var(--accent-2);
+  }
+  .check-pill{
+    display:flex;align-items:center;gap:10px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:10px 14px;
+    font-size:14px;
+    cursor:pointer;
+    transition:border-color .25s ease;
+    user-select:none;
+  }
+  .check-pill:hover{border-color:var(--accent-2);}
+  .check-pill input{accent-color:#e2262e;}
+  .check-pill.checked{border-color:rgba(226,38,46,.55);}
+  .pulse-dot{
+    box-shadow:0 0 0 0 rgba(226,38,46,.6);
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(226,38,46,.55);}
+    70%{box-shadow:0 0 0 8px rgba(226,38,46,0);}
+    100%{box-shadow:0 0 0 0 rgba(226,38,46,0);}
+  }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- =================== NAVBAR =================== -->
+<header class="fixed top-0 left-0 right-0 z-50 border-b hairline" style="background:rgba(10,10,11,.82);backdrop-filter:blur(10px);">
+  <div class="max-w-6xl mx-auto px-6 lg:px-10 h-[68px] flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-3">
+      <img src="Logo.png" alt="Kumitex" class="w-9 h-9 rounded-md object-contain bg-white/95 p-1">
+      <span class="font-display font-semibold tracking-tight text-lg">KUMITEX</span>
+    </a>
+    <a href="index.html" class="font-mono text-[11px] uppercase tracking-widest text-[var(--text-dim)] hover:text-white transition-colors">← Volver al inicio</a>
+  </div>
+</header>
+
+<main class="relative pt-[68px] min-h-screen overflow-hidden">
+  <div class="absolute inset-0 tatami-grid opacity-40 pointer-events-none"></div>
+  <div class="absolute inset-0 noise-fade pointer-events-none"></div>
+
+  <div class="max-w-6xl mx-auto px-6 lg:px-10 py-14 lg:py-20 relative">
+
+    <div class="max-w-2xl mb-12">
+      <div class="inline-flex items-center gap-2 border hairline px-3 py-1.5 mb-6 font-mono text-[11px] tracking-widest uppercase text-[var(--text-dim)]">
+        <span class="w-1.5 h-1.5 rounded-full bg-[var(--accent)] pulse-dot"></span>
+        Cotización en línea
+      </div>
+      <h1 class="font-display text-[34px] sm:text-[44px] leading-[1.06] font-semibold tracking-tight mb-5">
+        Cotiza la plataforma<br>de tu torneo.
+      </h1>
+      <p class="text-[var(--text-dim)] text-lg leading-relaxed">
+        Cuéntanos qué necesitas y obtén una estimación al instante. Si te hace sentido, seguimos la conversación por WhatsApp.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-[1fr_360px] gap-10 items-start">
+
+      <!-- =================== FORMULARIO =================== -->
+      <form id="quote-form" class="flex flex-col gap-6 bg-[var(--surface)] border hairline rounded-xl p-6 sm:p-8">
+
+        <p class="section-title">01 · Contacto</p>
+
+        <div>
+          <label for="q-nombre" class="field-label">Nombre *</label>
+          <input id="q-nombre" type="text" required placeholder="Tu nombre" class="field">
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-5">
+          <div>
+            <label for="q-telefono" class="field-label">Teléfono / WhatsApp *</label>
+            <input id="q-telefono" type="tel" required placeholder="+56 9 1234 5678" class="field">
+          </div>
+          <div>
+            <label for="q-email" class="field-label">Email</label>
+            <input id="q-email" type="email" placeholder="tu@correo.com" class="field">
+          </div>
+        </div>
+
+        <div>
+          <label for="q-org" class="field-label">Organización o club *</label>
+          <input id="q-org" type="text" required placeholder="Ej: World Kyokushin Budokai" class="field">
+        </div>
+
+        <p class="section-title pt-4 border-t hairline">02 · Tu torneo</p>
+
+        <div class="grid sm:grid-cols-2 gap-5">
+          <div>
+            <label for="q-torneo-nombre" class="field-label">Nombre del torneo</label>
+            <input id="q-torneo-nombre" type="text" placeholder="Ej: Copa Nacional 2026" class="field">
+          </div>
+          <div>
+            <label for="q-torneo-fecha" class="field-label">Fecha estimada</label>
+            <input id="q-torneo-fecha" type="text" placeholder="Ej: marzo 2027" class="field">
+          </div>
+        </div>
+
+        <div>
+          <label for="q-tamano" class="field-label">Tamaño esperado del torneo</label>
+          <select id="q-tamano" class="field">
+            <option value="">Selecciona un rango…</option>
+          </select>
+        </div>
+
+        <div>
+          <p class="field-label">Modalidades</p>
+          <div class="grid grid-cols-2 gap-2.5">
+            <label class="check-pill"><input type="checkbox" name="modalidades" value="Kumite"> Kumite</label>
+            <label class="check-pill"><input type="checkbox" name="modalidades" value="Kata"> Kata</label>
+          </div>
+        </div>
+
+        <div>
+          <p class="field-label">¿Qué necesitas en tu plataforma?</p>
+          <div id="q-modulos" class="grid sm:grid-cols-2 gap-2.5">
+            <!-- módulos generados desde la configuración -->
+          </div>
+        </div>
+
+        <p class="section-title pt-4 border-t hairline">03 · Personalización</p>
+
+        <div>
+          <label for="q-colores" class="field-label">Paleta de colores de la página</label>
+          <input id="q-colores" type="text" placeholder="Ej: rojo y negro, o los colores de tu club" class="field">
+        </div>
+
+        <div>
+          <p class="field-label">Logo (opcional)</p>
+          <input id="q-logo-input" type="file" accept="image/*" class="hidden">
+          <label for="q-logo-input" class="check-pill border-dashed">
+            <img id="q-logo-preview" class="hidden w-10 h-10 rounded-md object-cover border hairline" alt="Vista previa del logo">
+            <svg id="q-logo-icon" class="w-5 h-5 shrink-0 text-[var(--text-faint)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
+            <span id="q-logo-label" class="text-[var(--text-faint)]">Sube tu logo (PNG, JPG o SVG)</span>
+          </label>
+        </div>
+
+        <div>
+          <label for="q-comentarios" class="field-label">Comentarios adicionales</label>
+          <textarea id="q-comentarios" rows="3" placeholder="Referencias, plazos, algo más que quieras contarnos..." class="field resize-none"></textarea>
+        </div>
+
+        <!-- Resumen móvil -->
+        <div class="lg:hidden" id="summary-mobile-slot"></div>
+
+        <p id="q-note" class="text-xs text-[var(--text-faint)] leading-relaxed">La cotización es una estimación referencial. Tus datos quedan guardados de forma privada para que te contactemos.</p>
+
+        <button type="submit" id="q-submit" class="btn-primary py-3.5 text-sm font-medium w-full rounded-md">Obtener mi cotización</button>
+      </form>
+
+      <!-- =================== RESUMEN / COTIZACIÓN =================== -->
+      <aside id="summary-card" class="hidden lg:block sticky top-[92px] bg-[var(--surface)] border hairline rounded-xl p-6">
+        <p class="section-title mb-5">Tu cotización estimada</p>
+        <div id="summary-lines" class="flex flex-col gap-2.5 text-sm text-[var(--text-dim)]">
+          <!-- líneas generadas por JS -->
+        </div>
+        <div class="border-t hairline mt-4 pt-4 flex items-baseline justify-between">
+          <span class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)]">Total estimado</span>
+          <span id="summary-total" class="font-display text-2xl font-semibold">—</span>
+        </div>
+        <p class="text-[11px] text-[var(--text-faint)] leading-relaxed mt-4">Estimación referencial según lo seleccionado. El precio final se confirma contigo según los detalles de tu torneo.</p>
+      </aside>
+    </div>
+
+    <!-- =================== ÉXITO =================== -->
+    <div id="quote-success" class="hidden max-w-xl mx-auto text-center py-16">
+      <div class="w-14 h-14 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-6">
+        <svg class="w-7 h-7 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h2 class="font-display text-3xl font-semibold mb-3">¡Solicitud recibida!</h2>
+      <p class="text-[var(--text-dim)] leading-relaxed mb-2">Tu cotización estimada es</p>
+      <p id="success-total" class="font-display text-5xl font-semibold mb-8">—</p>
+      <div id="success-detail" class="bg-[var(--surface)] border hairline rounded-xl p-6 text-left text-sm text-[var(--text-dim)] flex flex-col gap-2 mb-8"></div>
+      <a id="success-wsp" href="#" target="_blank" rel="noopener" class="btn-primary inline-flex items-center justify-center gap-2.5 px-8 py-4 text-sm font-medium rounded-md w-full sm:w-auto">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.297-.497.1-.198.05-.371-.025-.52-.074-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Continuar por WhatsApp
+      </a>
+      <p class="text-xs text-[var(--text-faint)] mt-5">También te contactaremos con los datos que dejaste.</p>
+    </div>
+
+  </div>
+</main>
+
+<footer class="border-t hairline py-8">
+  <div class="max-w-6xl mx-auto px-6 lg:px-10 flex items-center justify-between text-[11px] font-mono uppercase tracking-widest text-[var(--text-faint)]">
+    <span>© 2026 Kumitex</span>
+    <a href="index.html" class="hover:text-white transition-colors">kumitex</a>
+  </div>
+</footer>
+
+<script>
+  // ═══ Conexión Supabase (clave publishable: pública por diseño) ═══
+  const SUPABASE_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Configuración de respaldo si no se puede leer Supabase
+  const CONFIG_FALLBACK = {
+    moneda: 'CLP',
+    whatsapp: '56912345678',
+    precio_base: 150000,
+    modulos: {
+      'Inscripciones online': 80000,
+      'Tablas en tiempo real': 100000,
+      'Llaves (brackets) automáticas': 90000,
+      'Ranking y clasificación final': 60000,
+      'Podios y página post-torneo': 40000
+    },
+    tamanos: {
+      'Menos de 100 participantes': 1.0,
+      '100 a 300 participantes': 1.25,
+      '300 a 600 participantes': 1.5,
+      'Más de 600 participantes': 1.8,
+      'Aún no lo sé': 1.0
+    }
+  };
+
+  let CONFIG = CONFIG_FALLBACK;
+
+  const fmt = (n) => new Intl.NumberFormat('es-CL', {
+    style: 'currency', currency: (CONFIG.moneda || 'CLP'), maximumFractionDigits: 0
+  }).format(n);
+
+  const $ = (id) => document.getElementById(id);
+
+  // ═══ Construcción dinámica de módulos y tamaños ═══
+  function buildOptions(){
+    const sel = $('q-tamano');
+    sel.innerHTML = '<option value="">Selecciona un rango…</option>' +
+      Object.keys(CONFIG.tamanos).map(t => `<option value="${t}">${t}</option>`).join('');
+
+    const cont = $('q-modulos');
+    cont.innerHTML = Object.entries(CONFIG.modulos).map(([nombre, precio]) => `
+      <label class="check-pill">
+        <input type="checkbox" name="modulos" value="${nombre}">
+        <span class="flex-1">${nombre}</span>
+        <span class="font-mono text-[11px] text-[var(--text-faint)]">${fmt(precio)}</span>
+      </label>`).join('') + `
+      <label class="check-pill">
+        <input type="checkbox" name="modulos" value="No estoy seguro, quiero asesoría" data-precio="0">
+        <span class="flex-1">Quiero asesoría</span>
+      </label>`;
+
+    document.querySelectorAll('.check-pill input').forEach(inp => {
+      inp.addEventListener('change', () => {
+        inp.closest('.check-pill').classList.toggle('checked', inp.checked);
+        renderSummary();
+      });
+    });
+    sel.addEventListener('change', renderSummary);
+  }
+
+  // ═══ Cálculo de la cotización ═══
+  function computeQuote(){
+    const seleccionados = Array.from(document.querySelectorAll('input[name="modulos"]:checked')).map(el => el.value);
+    const tamano = $('q-tamano').value;
+    const mult = CONFIG.tamanos[tamano] ?? 1;
+
+    const lineas = [{ nombre: 'Plataforma base', precio: CONFIG.precio_base }];
+    let subtotal = CONFIG.precio_base;
+    seleccionados.forEach(m => {
+      const p = CONFIG.modulos[m];
+      if (typeof p === 'number') { lineas.push({ nombre: m, precio: p }); subtotal += p; }
+    });
+    const total = Math.round(subtotal * mult);
+    return { lineas, subtotal, mult, tamano, total, seleccionados };
+  }
+
+  function renderSummary(){
+    const q = computeQuote();
+    const html = q.lineas.map(l =>
+      `<div class="flex justify-between gap-4"><span>${l.nombre}</span><span class="font-mono text-[12px]">${fmt(l.precio)}</span></div>`
+    ).join('') + (q.mult !== 1
+      ? `<div class="flex justify-between gap-4 text-[var(--text-faint)]"><span>Ajuste por tamaño (${q.tamano})</span><span class="font-mono text-[12px]">×${q.mult}</span></div>`
+      : '');
+    $('summary-lines').innerHTML = html;
+    $('summary-total').textContent = fmt(q.total);
+
+    let mob = $('summary-mobile');
+    if(!mob){
+      mob = document.createElement('div');
+      mob.id = 'summary-mobile';
+      mob.className = 'bg-[var(--surface-2)] border hairline rounded-lg p-5';
+      $('summary-mobile-slot').appendChild(mob);
+    }
+    mob.innerHTML = `<p class="section-title mb-3">Tu cotización estimada</p>
+      <div class="flex flex-col gap-2 text-sm text-[var(--text-dim)]">${html}</div>
+      <div class="border-t hairline mt-3 pt-3 flex items-baseline justify-between">
+        <span class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)]">Total estimado</span>
+        <span class="font-display text-xl font-semibold">${fmt(q.total)}</span>
+      </div>`;
+  }
+
+  // ═══ Logo ═══
+  const logoInput = $('q-logo-input');
+  logoInput.addEventListener('change', () => {
+    const file = logoInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      $('q-logo-preview').src = e.target.result;
+      $('q-logo-preview').classList.remove('hidden');
+      $('q-logo-icon').classList.add('hidden');
+      $('q-logo-label').textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ═══ Envío ═══
+  document.getElementById('quote-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const logoFile = logoInput.files[0];
+    if(logoFile){
+      const reader = new FileReader();
+      reader.onload = (ev) => submitQuote(ev.target.result, logoFile.name);
+      reader.readAsDataURL(logoFile);
+    } else {
+      submitQuote(null, null);
+    }
+  });
+
+  async function submitQuote(logoDataUrl, logoName){
+    const q = computeQuote();
+    const modalidades = Array.from(document.querySelectorAll('input[name="modalidades"]:checked')).map(el => el.value).join(', ');
+    const detalle = q.lineas.map(l => `${l.nombre}: ${fmt(l.precio)}`).join(' · ')
+      + (q.mult !== 1 ? ` · Ajuste tamaño ×${q.mult}` : '')
+      + ` · Total: ${fmt(q.total)}`;
+
+    const btn = $('q-submit');
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    const { error } = await sb.from('kumitex_demo_requests').insert({
+      nombre: $('q-nombre').value.trim(),
+      telefono: $('q-telefono').value.trim(),
+      email: $('q-email').value.trim() || null,
+      organizacion: $('q-org').value.trim(),
+      torneo_nombre: $('q-torneo-nombre').value.trim() || null,
+      torneo_fecha: $('q-torneo-fecha').value.trim() || null,
+      tamano_torneo: q.tamano || null,
+      modalidades: modalidades || null,
+      funcionalidades: q.seleccionados.join(', ') || null,
+      colores: $('q-colores').value.trim() || null,
+      comentarios: $('q-comentarios').value.trim() || null,
+      logo_data_url: logoDataUrl,
+      logo_name: logoName,
+      cotizacion_total: q.total,
+      cotizacion_detalle: detalle
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'Obtener mi cotización';
+
+    if(error){
+      const note = $('q-note');
+      note.textContent = 'No pudimos enviar tu solicitud. Revisa tu conexión e inténtalo de nuevo.';
+      note.style.color = 'var(--accent-2)';
+      return;
+    }
+
+    // Pantalla de éxito
+    $('success-total').textContent = fmt(q.total);
+    $('success-detail').innerHTML = q.lineas.map(l =>
+      `<div class="flex justify-between gap-4"><span>${l.nombre}</span><span class="font-mono text-[12px]">${fmt(l.precio)}</span></div>`
+    ).join('') + (q.mult !== 1
+      ? `<div class="flex justify-between gap-4 text-[var(--text-faint)]"><span>Ajuste por tamaño</span><span class="font-mono text-[12px]">×${q.mult}</span></div>`
+      : '');
+
+    const nombre = $('q-nombre').value.trim();
+    const org = $('q-org').value.trim();
+    const torneo = $('q-torneo-nombre').value.trim();
+    const msg = `¡Hola! Soy ${nombre} de ${org}.` +
+      (torneo ? ` Acabo de cotizar la plataforma para "${torneo}".` : ' Acabo de cotizar mi plataforma de torneo.') +
+      ` Total estimado: ${fmt(q.total)}. Me gustaría continuar.`;
+    $('success-wsp').href = `https://wa.me/${(CONFIG.whatsapp || '').replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+
+    document.getElementById('quote-form').classList.add('hidden');
+    $('summary-card').classList.add('hidden');
+    $('quote-success').classList.remove('hidden');
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+
+  // ═══ Carga de configuración ═══
+  (async () => {
+    try{
+      const { data, error } = await sb.from('kumitex_config').select('config').eq('id', 1).single();
+      if(!error && data && data.config) CONFIG = data.config;
+    }catch(err){ /* usa CONFIG_FALLBACK */ }
+    buildOptions();
+    renderSummary();
+  })();
+</script>
+
+</body>
+</html>

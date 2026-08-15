@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kumitex — Infraestructura digital para torneos de karate</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -163,7 +162,7 @@
       </nav>
 
       <div class="flex items-center gap-3">
-        <button type="button" class="open-demo-modal hidden sm:inline-flex btn-primary text-sm font-medium px-5 py-2.5">Solicitar una demo</button>
+        <a href="cotizar.html" class="hidden sm:inline-flex btn-primary text-sm font-medium px-5 py-2.5">Solicitar una demo</a>
         <button id="menu-btn" class="lg:hidden w-9 h-9 flex flex-col items-center justify-center gap-[5px]" aria-label="Abrir menú">
           <span class="block w-5 h-[1.5px] bg-white"></span>
           <span class="block w-5 h-[1.5px] bg-white"></span>
@@ -180,7 +179,7 @@
       <a href="#funcionalidades" class="mobile-link">Funcionalidades</a>
       <a href="#proceso" class="mobile-link">Cómo funciona</a>
       <a href="#contacto" class="mobile-link">Contacto</a>
-      <button type="button" class="open-demo-modal btn-primary text-center py-3 mt-4 font-sans text-base">Solicitar una demo</button>
+      <a href="cotizar.html" class="mobile-link btn-primary text-center py-3 mt-4 font-sans text-base">Solicitar una demo</a>
     </div>
   </div>
 </header>
@@ -214,7 +213,7 @@
       </p>
 
       <div class="flex flex-wrap gap-4 mb-5">
-        <button type="button" class="open-demo-modal btn-primary px-7 py-3.5 text-sm font-medium">Solicitar una demo</button>
+        <a href="cotizar.html" class="btn-primary px-7 py-3.5 text-sm font-medium inline-flex items-center">Solicitar una demo</a>
         <a href="#funcionalidades" class="btn-ghost px-7 py-3.5 text-sm font-medium">Ver cómo funciona</a>
       </div>
     </div>
@@ -739,7 +738,7 @@
     <h2 class="font-display text-[34px] sm:text-[48px] font-semibold leading-tight mb-6">¿Preparando tu próximo torneo?</h2>
     <p class="text-[var(--text-dim)] text-lg leading-relaxed mb-10 max-w-xl mx-auto">Hablemos sobre cómo tu equipo puede organizar todos sus torneos de karate desde una sola plataforma.</p>
     <div class="flex flex-wrap justify-center gap-4">
-      <button type="button" class="open-demo-modal btn-primary px-8 py-3.5 text-sm font-medium">Solicitar una demo</button>
+      <a href="cotizar.html" class="btn-primary px-8 py-3.5 text-sm font-medium inline-flex items-center">Solicitar una demo</a>
       <a href="https://wa.link/db31wn" target="_blank" rel="noopener" class="btn-ghost px-8 py-3.5 text-sm font-medium">Hablar con nosotros</a>
     </div>
   </div>
@@ -868,122 +867,11 @@
       </div>
     </div>
     <div class="border-t hairline pt-8 flex flex-col sm:flex-row justify-between gap-3 text-xs text-[var(--text-faint)] font-mono">
-      <button type="button" id="admin-trigger" class="text-left hover:text-white transition-colors cursor-default">© 2026 KUMITEX. Todos los derechos reservados.</button>
+      <a href="admin.html" class="text-left hover:text-white transition-colors cursor-default">© 2026 KUMITEX. Todos los derechos reservados.</a>
       <span>Infraestructura digital para torneos de karate.</span>
     </div>
   </div>
 </footer>
-
-<!-- =================== MODAL: SOLICITAR DEMO =================== -->
-<div id="demo-modal" class="fixed inset-0 z-50 hidden items-center justify-center px-4 py-8">
-  <div id="demo-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-
-  <div class="relative w-full max-w-lg bg-[var(--surface)] border hairline rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between px-6 sm:px-8 pt-6 pb-4 border-b hairline sticky top-0 bg-[var(--surface)]">
-      <div>
-        <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--accent-2)] mb-1">Solicitar demo</p>
-        <h3 class="font-display text-xl font-semibold">Cuéntanos sobre tu página</h3>
-      </div>
-      <button type="button" id="demo-modal-close" aria-label="Cerrar" class="w-8 h-8 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-white hover:bg-[var(--surface-2)] transition-colors">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-
-    <form id="demo-form" class="px-6 sm:px-8 py-6 flex flex-col gap-5">
-      <div>
-        <label for="demo-nombre" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Nombre *</label>
-        <input id="demo-nombre" name="nombre" type="text" required placeholder="Tu nombre" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
-      </div>
-
-      <div>
-        <label for="demo-telefono" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Teléfono *</label>
-        <input id="demo-telefono" name="telefono" type="tel" required placeholder="+56 9 1234 5678" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
-      </div>
-
-      <div>
-        <label for="demo-org" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Nombre de tu organización o club *</label>
-        <input id="demo-org" name="org" type="text" required placeholder="Ej: World Kyokushin Budokai" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
-      </div>
-
-      <div>
-        <label for="demo-colores" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Paleta de colores de la página</label>
-        <input id="demo-colores" name="colores" type="text" placeholder="Ej: rojo y negro, o los colores de tu club" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
-      </div>
-
-      <div>
-        <label class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Logo (opcional)</label>
-        <input id="demo-logo-input" name="logo" type="file" accept="image/*" class="hidden">
-        <label for="demo-logo-input" id="demo-logo-dropzone" class="flex items-center gap-3 border border-dashed hairline rounded-md px-3.5 py-3 text-sm text-[var(--text-faint)] cursor-pointer hover:border-[var(--accent-2)] transition-colors">
-          <img id="demo-logo-preview" class="hidden w-10 h-10 rounded-md object-cover border hairline" alt="Vista previa del logo">
-          <svg id="demo-logo-icon" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
-          <span id="demo-logo-label">Sube tu logo (PNG, JPG o SVG)</span>
-        </label>
-      </div>
-
-      <div>
-        <label for="demo-comentarios" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Comentarios adicionales</label>
-        <textarea id="demo-comentarios" name="comentarios" rows="3" placeholder="Referencias de páginas que te gusten, plazos, algo más que quieras contarnos..." class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors resize-none"></textarea>
-      </div>
-
-      <p id="demo-form-note" class="text-xs text-[var(--text-faint)] leading-relaxed">Tus datos quedan guardados de forma privada para que te contactemos.</p>
-
-      <button type="submit" class="btn-primary py-3 text-sm font-medium w-full">Enviar solicitud</button>
-    </form>
-
-    <div id="demo-form-success" class="hidden px-6 sm:px-8 py-10 text-center">
-      <div class="w-12 h-12 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-4">
-        <svg class="w-6 h-6 text-[var(--accent-2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg>
-      </div>
-      <p class="font-display text-lg font-semibold mb-2">¡Solicitud enviada!</p>
-      <p class="text-sm text-[var(--text-faint)] leading-relaxed">Recibimos tus datos. Te contactaremos pronto.</p>
-    </div>
-  </div>
-</div>
-
-<!-- =================== MODAL: ADMIN LOGIN =================== -->
-<div id="admin-login-modal" class="fixed inset-0 z-50 hidden items-center justify-center px-4 py-8">
-  <div id="admin-login-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-  <div class="relative w-full max-w-sm bg-[var(--surface)] border hairline rounded-xl shadow-2xl">
-    <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b hairline">
-      <h3 class="font-display text-lg font-semibold">Acceso admin</h3>
-      <button type="button" id="admin-login-close" aria-label="Cerrar" class="w-8 h-8 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-white hover:bg-[var(--surface-2)] transition-colors">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <form id="admin-login-form" class="px-6 py-6 flex flex-col gap-4">
-      <div>
-        <label for="admin-password" class="block font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mb-2">Clave</label>
-        <input id="admin-password" type="password" required placeholder="••••••••" class="w-full bg-[var(--surface-2)] border hairline rounded-md px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-faint)] outline-none focus:border-[var(--accent-2)] transition-colors">
-      </div>
-      <p id="admin-login-error" class="hidden text-xs text-[var(--accent-2)]">Clave incorrecta.</p>
-      <button type="submit" class="btn-primary py-3 text-sm font-medium w-full">Entrar</button>
-    </form>
-  </div>
-</div>
-
-<!-- =================== MODAL: ADMIN PANEL =================== -->
-<div id="admin-panel-modal" class="fixed inset-0 z-50 hidden items-center justify-center px-4 py-8">
-  <div id="admin-panel-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-  <div class="relative w-full max-w-3xl bg-[var(--surface)] border hairline rounded-xl shadow-2xl max-h-[88vh] overflow-y-auto">
-    <div class="flex items-center justify-between px-6 sm:px-8 pt-6 pb-4 border-b hairline sticky top-0 bg-[var(--surface)] z-10">
-      <div>
-        <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--accent-2)] mb-1">Admin</p>
-        <h3 class="font-display text-xl font-semibold">Solicitudes de demo</h3>
-      </div>
-      <div class="flex items-center gap-2">
-        <button type="button" id="admin-clear-all" class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] hover:text-[var(--accent-2)] transition-colors px-2">Borrar todo</button>
-        <button type="button" id="admin-panel-close" aria-label="Cerrar" class="w-8 h-8 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-white hover:bg-[var(--surface-2)] transition-colors">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
-      </div>
-    </div>
-    <div id="admin-panel-list" class="px-6 sm:px-8 py-6 flex flex-col gap-4">
-      <!-- filled by JS -->
-    </div>
-    <p id="admin-panel-empty" class="hidden px-6 sm:px-8 pb-10 text-sm text-[var(--text-faint)]">Todavía no hay solicitudes enviadas desde este navegador.</p>
-    <p class="px-6 sm:px-8 pb-6 text-xs text-[var(--text-faint)] leading-relaxed border-t hairline pt-4">Las solicitudes de todos los visitantes se guardan en Supabase (tabla <span class="font-mono">kumitex_demo_requests</span>); aquí solo se muestran las enviadas desde este navegador. <a href="https://supabase.com/dashboard/project/rldtkomtclolhbmrphgh/editor" target="_blank" rel="noopener" class="underline hover:text-white transition-colors">Ver todas en Supabase →</a></p>
-  </div>
-</div>
 
 <script>
   // Mobile menu
@@ -1055,253 +943,6 @@
     });
   });
 
-  // Demo modal
-  const demoModal = document.getElementById('demo-modal');
-  const demoForm = document.getElementById('demo-form');
-  const demoFormSuccess = document.getElementById('demo-form-success');
-  const demoModalClose = document.getElementById('demo-modal-close');
-  const demoModalBackdrop = document.getElementById('demo-modal-backdrop');
-  const demoLogoInput = document.getElementById('demo-logo-input');
-  const demoLogoPreview = document.getElementById('demo-logo-preview');
-  const demoLogoIcon = document.getElementById('demo-logo-icon');
-  const demoLogoLabel = document.getElementById('demo-logo-label');
-  const STORAGE_KEY = 'kumitex_demo_requests';
-
-  // Supabase: las solicitudes de demo se guardan en la tabla kumitex_demo_requests.
-  // La clave publishable es pública por diseño; la lectura está bloqueada por RLS.
-  const SUPABASE_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  function openDemoModal(){
-    demoForm.classList.remove('hidden');
-    demoFormSuccess.classList.add('hidden');
-    demoModal.classList.remove('hidden');
-    demoModal.classList.add('flex');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeDemoModal(){
-    demoModal.classList.add('hidden');
-    demoModal.classList.remove('flex');
-    document.body.style.overflow = '';
-  }
-  document.querySelectorAll('.open-demo-modal').forEach(btn=>{
-    btn.addEventListener('click', openDemoModal);
-  });
-  demoModalClose.addEventListener('click', closeDemoModal);
-  demoModalBackdrop.addEventListener('click', closeDemoModal);
-  document.addEventListener('keydown', (e)=>{
-    if(e.key === 'Escape'){
-      if(!demoModal.classList.contains('hidden')) closeDemoModal();
-      if(!adminLoginModal.classList.contains('hidden')) closeAdminLogin();
-      if(!adminPanelModal.classList.contains('hidden')) closeAdminPanel();
-    }
-  });
-
-  demoLogoInput.addEventListener('change', ()=>{
-    const file = demoLogoInput.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (e)=>{
-      demoLogoPreview.src = e.target.result;
-      demoLogoPreview.classList.remove('hidden');
-      demoLogoIcon.classList.add('hidden');
-      demoLogoLabel.textContent = file.name;
-    };
-    reader.readAsDataURL(file);
-  });
-
-  function readRequests(){
-    try{
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    }catch(err){ return []; }
-  }
-  function saveRequests(list){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  }
-
-  demoForm.addEventListener('submit', (e)=>{
-    e.preventDefault();
-    const logoFile = demoLogoInput.files[0];
-
-    async function finishSubmit(logoDataUrl, logoName){
-      const entry = {
-        nombre: document.getElementById('demo-nombre').value.trim(),
-        telefono: document.getElementById('demo-telefono').value.trim(),
-        org: document.getElementById('demo-org').value.trim(),
-        colores: document.getElementById('demo-colores').value.trim(),
-        comentarios: document.getElementById('demo-comentarios').value.trim(),
-        logoDataUrl: logoDataUrl || null,
-        logoName: logoName || null,
-        fecha: new Date().toISOString()
-      };
-
-      const submitBtn = demoForm.querySelector('button[type="submit"]');
-      const note = document.getElementById('demo-form-note');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Enviando…';
-
-      const { error } = await sb.from('kumitex_demo_requests').insert({
-        nombre: entry.nombre,
-        telefono: entry.telefono,
-        organizacion: entry.org,
-        colores: entry.colores || null,
-        comentarios: entry.comentarios || null,
-        logo_data_url: entry.logoDataUrl,
-        logo_name: entry.logoName
-      });
-
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Enviar solicitud';
-
-      if(error){
-        note.textContent = 'No pudimos enviar tu solicitud. Revisa tu conexión e inténtalo de nuevo.';
-        note.style.color = 'var(--accent-2)';
-        return;
-      }
-
-      // Copia local para el panel admin de este navegador
-      const list = readRequests();
-      list.unshift(entry);
-      saveRequests(list);
-
-      demoForm.reset();
-      demoLogoPreview.classList.add('hidden');
-      demoLogoIcon.classList.remove('hidden');
-      demoLogoLabel.textContent = 'Sube tu logo (PNG, JPG o SVG)';
-      demoForm.classList.add('hidden');
-      demoFormSuccess.classList.remove('hidden');
-      setTimeout(closeDemoModal, 1800);
-    }
-
-    if(logoFile){
-      const reader = new FileReader();
-      reader.onload = (e)=> finishSubmit(e.target.result, logoFile.name);
-      reader.readAsDataURL(logoFile);
-    } else {
-      finishSubmit(null, null);
-    }
-  });
-
-  // Admin access
-  // Cambia esta clave por la que prefieras (no la dejes visible a otras personas).
-  const ADMIN_PASSWORD = 'kumitex-admin-2026';
-
-  const adminTrigger = document.getElementById('admin-trigger');
-  const adminLoginModal = document.getElementById('admin-login-modal');
-  const adminLoginForm = document.getElementById('admin-login-form');
-  const adminLoginClose = document.getElementById('admin-login-close');
-  const adminLoginBackdrop = document.getElementById('admin-login-backdrop');
-  const adminLoginError = document.getElementById('admin-login-error');
-  const adminPasswordInput = document.getElementById('admin-password');
-
-  const adminPanelModal = document.getElementById('admin-panel-modal');
-  const adminPanelClose = document.getElementById('admin-panel-close');
-  const adminPanelBackdrop = document.getElementById('admin-panel-backdrop');
-  const adminPanelList = document.getElementById('admin-panel-list');
-  const adminPanelEmpty = document.getElementById('admin-panel-empty');
-  const adminClearAll = document.getElementById('admin-clear-all');
-
-  function openAdminLogin(){
-    adminLoginError.classList.add('hidden');
-    adminLoginForm.reset();
-    adminLoginModal.classList.remove('hidden');
-    adminLoginModal.classList.add('flex');
-    document.body.style.overflow = 'hidden';
-    setTimeout(()=>adminPasswordInput.focus(), 50);
-  }
-  function closeAdminLogin(){
-    adminLoginModal.classList.add('hidden');
-    adminLoginModal.classList.remove('flex');
-    document.body.style.overflow = '';
-  }
-  function openAdminPanel(){
-    renderAdminList();
-    adminPanelModal.classList.remove('hidden');
-    adminPanelModal.classList.add('flex');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeAdminPanel(){
-    adminPanelModal.classList.add('hidden');
-    adminPanelModal.classList.remove('flex');
-    document.body.style.overflow = '';
-  }
-
-  adminTrigger.addEventListener('click', openAdminLogin);
-  adminLoginClose.addEventListener('click', closeAdminLogin);
-  adminLoginBackdrop.addEventListener('click', closeAdminLogin);
-  adminPanelClose.addEventListener('click', closeAdminPanel);
-  adminPanelBackdrop.addEventListener('click', closeAdminPanel);
-
-  adminLoginForm.addEventListener('submit', (e)=>{
-    e.preventDefault();
-    if(adminPasswordInput.value === ADMIN_PASSWORD){
-      closeAdminLogin();
-      openAdminPanel();
-    } else {
-      adminLoginError.classList.remove('hidden');
-      adminPasswordInput.value = '';
-      adminPasswordInput.focus();
-    }
-  });
-
-  function formatFecha(iso){
-    try{
-      return new Date(iso).toLocaleString('es-CL', {dateStyle:'medium', timeStyle:'short'});
-    }catch(err){ return iso; }
-  }
-
-  function renderAdminList(){
-    const list = readRequests();
-    adminPanelList.innerHTML = '';
-    adminPanelEmpty.classList.toggle('hidden', list.length > 0);
-
-    list.forEach((entry, idx)=>{
-      const card = document.createElement('div');
-      card.className = 'border hairline rounded-lg p-5 bg-[var(--surface-2)]';
-      card.innerHTML = `
-        <div class="flex items-start justify-between gap-4 mb-3">
-          <div class="flex items-center gap-3">
-            ${entry.logoDataUrl ? `<img src="${entry.logoDataUrl}" alt="Logo" class="w-10 h-10 rounded-md object-cover border hairline">` : ''}
-            <div>
-              <p class="font-display font-semibold">${escapeHtml(entry.nombre)}</p>
-              <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-0.5">${formatFecha(entry.fecha)}</p>
-            </div>
-          </div>
-          <button type="button" data-idx="${idx}" class="admin-delete-btn font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] hover:text-[var(--accent-2)] transition-colors shrink-0">Eliminar</button>
-        </div>
-        <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-[var(--text-dim)]">
-          <p><span class="text-[var(--text-faint)]">Teléfono:</span> ${escapeHtml(entry.telefono)}</p>
-          <p><span class="text-[var(--text-faint)]">Organización:</span> ${escapeHtml(entry.org)}</p>
-          ${entry.colores ? `<p class="sm:col-span-2"><span class="text-[var(--text-faint)]">Colores:</span> ${escapeHtml(entry.colores)}</p>` : ''}
-          ${entry.comentarios ? `<p class="sm:col-span-2"><span class="text-[var(--text-faint)]">Comentarios:</span> ${escapeHtml(entry.comentarios)}</p>` : ''}
-        </div>
-      `;
-      adminPanelList.appendChild(card);
-    });
-
-    adminPanelList.querySelectorAll('.admin-delete-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const list = readRequests();
-        list.splice(parseInt(btn.dataset.idx, 10), 1);
-        saveRequests(list);
-        renderAdminList();
-      });
-    });
-  }
-
-  function escapeHtml(str){
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-  }
-
-  adminClearAll.addEventListener('click', ()=>{
-    if(confirm('¿Borrar todas las solicitudes guardadas en este navegador?')){
-      saveRequests([]);
-      renderAdminList();
-    }
-  });
 
   const navbar = document.getElementById('navbar');
   window.addEventListener('scroll', ()=>{
