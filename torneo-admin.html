@@ -406,6 +406,7 @@
             <select id="tat-num" style="width:120px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:#fff;outline:none;"></select>
           </div>
           <button class="btn btn-ghost" id="tat-auto">Repartir sin asignar automáticamente</button>
+          <a class="btn btn-primary" id="tat-print" target="_blank" rel="noopener">🖨 Documento del torneo (PDF)</a>
           <span class="msg" id="tat-msg"></span>
         </div>
       </div>
@@ -467,7 +468,10 @@
   <div class="kata-shell">
     <div class="kata-head">
       <h3 id="kata-title">Evaluación de kata</h3>
-      <button class="kata-close" id="kata-close" aria-label="Cerrar">×</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <a id="kata-print" class="top-link" target="_blank" rel="noopener" style="color:var(--accent-2);">Imprimir / PDF ↗</a>
+        <button class="kata-close" id="kata-close" aria-label="Cerrar">×</button>
+      </div>
     </div>
     <div class="kata-body" id="kata-body"></div>
   </div>
@@ -555,6 +559,7 @@
     document.title = `${TORNEO.nombre} — Panel`;
     $('link-publico').href = `torneo.html?t=${SLUG}`;
     $('link-prueba').href = `torneo.html?t=${SLUG}&prueba=1`;
+    $('tat-print').href = `imprimir.html?t=${SLUG}&todo=1`;
     renderComps();
     renderCats();
     renderTatamis();
@@ -762,6 +767,7 @@
     KATA_ID = id;
     SWAP_MODE = false;
     SWAP_SEL = null;
+    $('kata-print').href = `imprimir.html?t=${SLUG}&cat=${id}`;
     $('kata-modal').classList.add('open');
     document.body.style.overflow = 'hidden';
     renderEval();

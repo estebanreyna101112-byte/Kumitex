@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Imprimir — Kumitex</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Vista de impresión: fondo blanco, pensada para papel / PDF */
+  :root{
+    --ink:#111;
+    --ink-dim:#555;
+    --ink-faint:#999;
+    --line:#ccc;
+    --line-2:#888;
+    --accent:#e2262e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:#f2f2f2;color:var(--ink);
+    font-family:'Inter',sans-serif;line-height:1.45;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .sheet{
+    background:#fff;max-width:1100px;margin:18px auto;padding:34px 40px;
+    box-shadow:0 2px 14px rgba(0,0,0,.12);
+  }
+  .font-display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* Encabezado de hoja */
+  .hd{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:20px;}
+  .hd .lft{display:flex;align-items:center;gap:14px;min-width:0;}
+  .hd img{width:44px;height:44px;object-fit:contain;flex:0 0 auto;}
+  .hd h1{font-family:'Space Grotesk',sans-serif;font-size:21px;font-weight:700;letter-spacing:-.01em;}
+  .hd .sub{font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  .hd .rgt{text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-dim);white-space:nowrap;}
+
+  h2.cat-title{
+    font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin:4px 0 4px;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .tag{
+    font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;
+    letter-spacing:.1em;border:1px solid var(--line-2);border-radius:99px;padding:2px 9px;color:var(--ink-dim);
+  }
+  .tag.acc{border-color:var(--accent);color:var(--accent);}
+  .meta{font-size:11.5px;color:var(--ink-dim);margin-bottom:16px;}
+
+  /* ── Llave de kumite ── */
+  .br-wrap{display:flex;gap:14px;align-items:stretch;}
+  .br-col{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;}
+  .br-col-inner{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:8px;}
+  .br-col-title{
+    font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;
+    letter-spacing:.1em;color:var(--ink-dim);text-align:center;
+  }
+  .br-match{border:1.5px solid var(--ink);border-radius:6px;overflow:hidden;background:#fff;}
+  .br-slot{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:7px 10px;font-size:12px;border-bottom:1px solid var(--line);min-height:34px;
+  }
+  .br-slot:last-child{border-bottom:none;}
+  .br-slot .org{display:block;font-size:9.5px;color:var(--ink-faint);}
+  .br-slot.empty{color:var(--ink-faint);font-style:italic;}
+  .br-slot.win{background:#f6dcdd;font-weight:700;}
+  .br-slot .chk{color:var(--accent);font-weight:700;}
+
+  /* ── Kata ── */
+  table.kata{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;}
+  table.kata th{
+    font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--ink-dim);border-bottom:1.5px solid var(--ink);text-align:left;padding:7px 9px;
+  }
+  table.kata td{border-bottom:1px solid var(--line);padding:8px 9px;vertical-align:middle;}
+  table.kata td.c, table.kata th.c{text-align:center;width:76px;}
+  table.kata td.score-blank{height:30px;}
+  table.kata .adv{color:var(--accent);font-weight:600;font-size:11px;}
+
+  /* ── Podio ── */
+  .podio{border:1.5px solid var(--ink);border-radius:8px;padding:12px 16px;margin:14px 0;display:inline-block;min-width:320px;}
+  .podio .pl{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:13.5px;}
+  .podio .m{width:24px;text-align:center;font-size:16px;}
+  .podio .pts{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-dim);}
+
+  /* ── Programa / medallero ── */
+  .tat-grid{display:flex;gap:14px;flex-wrap:wrap;}
+  .tat-col{flex:1;min-width:220px;border:1.5px solid var(--ink);border-radius:8px;padding:12px 14px;}
+  .tat-col h3{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
+  .tat-line{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .tat-line:last-child{border-bottom:none;}
+  .tat-line .n{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-dim);width:16px;}
+  table.medal{border-collapse:collapse;font-size:13px;min-width:380px;}
+  table.medal th{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);border-bottom:1.5px solid var(--ink);padding:6px 12px;text-align:left;}
+  table.medal td{border-bottom:1px solid var(--line);padding:7px 12px;}
+  table.medal .c{text-align:center;width:46px;}
+
+  .foot{
+    margin-top:22px;padding-top:10px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;
+    font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-faint);
+  }
+
+  /* Botón imprimir (solo pantalla) */
+  .printbar{
+    position:fixed;bottom:18px;right:18px;z-index:10;display:flex;gap:10px;
+  }
+  .printbar button{
+    background:var(--accent);color:#fff;border:none;border-radius:8px;
+    padding:13px 22px;font-size:14px;font-weight:600;font-family:'Inter',sans-serif;
+    cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);
+  }
+  .printbar button:hover{background:#c71e25;}
+  .msg-center{max-width:480px;margin:100px auto;text-align:center;font-size:15px;color:var(--ink-dim);}
+
+  @media print{
+    body{background:#fff;}
+    .sheet{box-shadow:none;margin:0;padding:10mm 8mm;max-width:none;}
+    .printbar{display:none;}
+    .page{page-break-after:always;}
+    .page:last-child{page-break-after:auto;}
+  }
+  @page{size:A4 landscape;margin:8mm;}
+</style>
+</head>
+<body>
+
+<div id="out"></div>
+<div class="printbar" id="printbar" style="display:none;">
+  <button onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const P = new URLSearchParams(location.search);
+  const SLUG = P.get('t');
+  const CAT_ID = P.get('cat');
+  const TODO = P.get('todo') === '1';
+
+  function esc(s){
+    const d = document.createElement('div');
+    d.textContent = s ?? '';
+    return d.innerHTML;
+  }
+
+  function hoy(){
+    return new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  async function main(){
+    const out = document.getElementById('out');
+    if(!SLUG){ out.innerHTML = '<p class="msg-center">Falta el torneo en la URL (?t=slug).</p>'; return; }
+
+    const { data: t } = await sb.from('kumitex_torneos').select('*').eq('slug', SLUG).single();
+    if(!t){ out.innerHTML = '<p class="msg-center">Torneo no encontrado.</p>'; return; }
+
+    const [{ data: comps }, { data: cats }, { data: inscs }] = await Promise.all([
+      sb.from('kumitex_competidores').select('*').eq('torneo_id', t.id),
+      sb.from('kumitex_categorias').select('*').eq('torneo_id', t.id).order('orden').order('created_at'),
+      sb.from('kumitex_inscripciones').select('*').eq('torneo_id', t.id)
+    ]);
+
+    const C = comps || [], K = cats || [], I = inscs || [];
+    const compsDe = (catId) => I.filter(x => x.categoria_id === catId).map(x => C.find(c => c.id === x.competidor_id)).filter(Boolean);
+    const nom = (cid) => { const c = C.find(x => x.id === cid); return c ? c.nombre : '(eliminado)'; };
+    const org = (cid) => { const c = C.find(x => x.id === cid); return c ? [c.organizacion, c.pais].filter(Boolean).join(' · ') : ''; };
+
+    const header = (subtitulo) => `
+      <div class="hd">
+        <div class="lft">
+          ${t.logo_url ? `<img src="${t.logo_url}" alt="">` : '<img src="assets/logo.svg" alt="">'}
+          <div>
+            <h1>${esc(t.nombre)}</h1>
+            <div class="sub">${esc([t.organizacion, t.fecha, t.lugar].filter(Boolean).join(' · '))}</div>
+          </div>
+        </div>
+        <div class="rgt">${subtitulo}<br>${hoy()}</div>
+      </div>`;
+
+    const footer = () => `<div class="foot"><span>${esc(t.nombre)}</span><span>Generado con Kumitex</span></div>`;
+
+    // ── Llave de kumite ──
+    function kumiteSheet(k){
+      const L = k.llave;
+      const inscritos = compsDe(k.id);
+      let cuerpo = '';
+      if(L && L.modo === 'kumite' && Array.isArray(L.rondas) && !L.armado){
+        const total = L.rondas.length;
+        const nombreRonda = (i) => i === total - 1 ? 'Final' : i === total - 2 ? 'Semifinales' : i === total - 3 ? 'Cuartos de final' : `Ronda ${i + 1}`;
+        const medallas = { 1: '🥇', 2: '🥈', 3: '🥉' };
+        if(L.finalizada && L.podio?.length){
+          cuerpo += `<div class="podio">${L.podio.map(p => `
+            <div class="pl"><span class="m">${medallas[p.lugar] || ''}</span><span>${esc(nom(p.cid))}</span></div>`).join('')}</div>`;
+        }
+        cuerpo += '<div class="br-wrap">';
+        L.rondas.forEach((ronda, r) => {
+          cuerpo += `<div class="br-col"><div class="br-col-title">${nombreRonda(r)}</div><div class="br-col-inner">`;
+          ronda.forEach(m => {
+            const bye = (m.a && !m.b) || (!m.a && m.b);
+            if(r === 0 && (bye || (!m.a && !m.b))) return;
+            const slot = (cid) => cid
+              ? `<div class="br-slot ${m.g === cid ? 'win' : ''}"><span>${esc(nom(cid))}<span class="org">${esc(org(cid))}</span></span>${m.g === cid ? '<span class="chk">✓</span>' : ''}</div>`
+              : `<div class="br-slot empty">${r === 0 ? 'BYE' : ''}</div>`;
+            cuerpo += `<div class="br-match">${slot(m.a)}${slot(m.b)}</div>`;
+          });
+          cuerpo += '</div></div>';
+        });
+        cuerpo += '</div>';
+      } else {
+        // sin llave: lista de inscritos para sorteo manual en papel
+        cuerpo += `<table class="kata"><thead><tr><th style="width:30px;">#</th><th>Competidor</th><th>Club</th><th class="c">Resultado</th></tr></thead><tbody>`;
+        cuerpo += inscritos.map((c, i) => `<tr><td class="mono" style="font-size:10px;">${i + 1}</td><td><strong>${esc(c.nombre)}</strong></td><td>${esc([c.organizacion, c.pais].filter(Boolean).join(' · '))}</td><td class="score-blank"></td></tr>`).join('');
+        cuerpo += '</tbody></table>';
+      }
+      return `<div class="sheet page">${header('Llave de kumite')}
+        <h2 class="cat-title">${esc(k.nombre)} <span class="tag acc">kumite</span> <span class="tag">${inscritos.length} competidores</span></h2>
+        <div class="meta">Tatami ${k.tatami ?? '—'} · Orden ${k.orden || '—'}</div>
+        ${cuerpo}${footer()}</div>`;
+    }
+
+    // ── Kata: resultados o planilla en blanco para jueces ──
+    function kataSheet(k){
+      const L = k.llave;
+      const inscritos = compsDe(k.id);
+      let cuerpo = '';
+      if(L && Array.isArray(L.rondas) && L.rondas.length){
+        const medallas = ['🥇','🥈','🥉'];
+        if(L.finalizada && L.podio?.length){
+          cuerpo += `<div class="podio">${L.podio.map(p => `
+            <div class="pl"><span class="m">${medallas[p.lugar - 1] || ''}</span><span>${esc(nom(p.cid))}</span><span class="pts">${p.p ?? '—'} pts</span></div>`).join('')}</div>`;
+        }
+        const participantes = [...new Set(L.rondas.flat().map(r => r.cid))];
+        cuerpo += `<table class="kata"><thead><tr><th>Competidor</th><th>Club</th>
+          ${L.rondas.map((_, i) => `<th class="c">Ronda ${i + 1}</th>`).join('')}</tr></thead><tbody>`;
+        cuerpo += participantes.map(cid => `<tr>
+          <td><strong>${esc(nom(cid))}</strong></td><td style="font-size:11px;color:var(--ink-dim);">${esc(org(cid))}</td>
+          ${L.rondas.map(ronda => {
+            const r = ronda.find(x => x.cid === cid);
+            if(!r) return '<td class="c" style="color:var(--ink-faint);">—</td>';
+            return `<td class="c">${r.p ?? '—'}${r.a ? ' <span class="adv">▸</span>' : ''}</td>`;
+          }).join('')}</tr>`).join('');
+        cuerpo += '</tbody></table><div class="meta" style="margin-top:8px;">▸ = avanzó a la siguiente ronda</div>';
+      } else {
+        // planilla en blanco para los jueces
+        cuerpo += `<table class="kata"><thead><tr><th style="width:30px;">#</th><th>Competidor</th><th>Club</th>
+          <th class="c">Ronda 1</th><th class="c">Ronda 2</th><th class="c">Ronda 3</th></tr></thead><tbody>`;
+        cuerpo += inscritos.map((c, i) => `<tr>
+          <td class="mono" style="font-size:10px;">${i + 1}</td><td><strong>${esc(c.nombre)}</strong></td>
+          <td style="font-size:11px;color:var(--ink-dim);">${esc([c.organizacion, c.pais].filter(Boolean).join(' · '))}</td>
+          <td class="score-blank"></td><td class="score-blank"></td><td class="score-blank"></td></tr>`).join('');
+        cuerpo += '</tbody></table><div class="meta" style="margin-top:8px;">Planilla de evaluación — puntaje por ronda</div>';
+      }
+      return `<div class="sheet page">${header('Evaluación de kata')}
+        <h2 class="cat-title">${esc(k.nombre)} <span class="tag acc">kata</span> <span class="tag">${inscritos.length} competidores</span></h2>
+        <div class="meta">Tatami ${k.tatami ?? '—'} · Orden ${k.orden || '—'}</div>
+        ${cuerpo}${footer()}</div>`;
+    }
+
+    // ── Programa + medallero (portada del documento completo) ──
+    function portadaSheet(){
+      const conTatami = K.filter(k => k.tatami);
+      let cuerpo = '';
+      if(conTatami.length){
+        const maxT = Math.max(...conTatami.map(k => k.tatami));
+        cuerpo += '<h2 class="cat-title" style="margin-bottom:10px;">Programa por tatami</h2><div class="tat-grid">';
+        for(let n = 1; n <= maxT; n++){
+          const col = conTatami.filter(k => k.tatami === n).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+          if(!col.length) continue;
+          cuerpo += `<div class="tat-col"><h3>Tatami ${n}</h3>` + col.map((k, i) =>
+            `<div class="tat-line"><span class="n">${i + 1}</span><span>${esc(k.nombre)}</span></div>`).join('') + '</div>';
+        }
+        cuerpo += '</div>';
+      }
+      const med = {};
+      K.filter(k => k.llave?.finalizada && Array.isArray(k.llave.podio)).forEach(k => {
+        k.llave.podio.forEach(p => {
+          const c = C.find(x => x.id === p.cid);
+          if(!c) return;
+          const o = (c.organizacion || 'Sin club').trim();
+          if(!med[o]) med[o] = [0, 0, 0];
+          if(p.lugar >= 1 && p.lugar <= 3) med[o][p.lugar - 1]++;
+        });
+      });
+      const filas = Object.entries(med).sort((a, b) => (b[1][0] - a[1][0]) || (b[1][1] - a[1][1]) || (b[1][2] - a[1][2]));
+      if(filas.length){
+        cuerpo += `<h2 class="cat-title" style="margin:22px 0 10px;">Medallero por club</h2>
+          <table class="medal"><thead><tr><th></th><th>Club</th><th class="c">🥇</th><th class="c">🥈</th><th class="c">🥉</th></tr></thead><tbody>
+          ${filas.map(([o, m], i) => `<tr><td class="mono" style="font-size:10px;">${i + 1}</td><td><strong>${esc(o)}</strong></td><td class="c">${m[0]}</td><td class="c">${m[1]}</td><td class="c">${m[2]}</td></tr>`).join('')}
+          </tbody></table>`;
+      }
+      const stats = `<div class="meta" style="margin-bottom:16px;">${C.length} competidores · ${K.length} categorías · ${new Set(C.map(c => (c.organizacion || '').trim().toLowerCase()).filter(Boolean)).size} clubes</div>`;
+      return `<div class="sheet page">${header('Documento del torneo')}${stats}${cuerpo || '<p class="meta">Aún no hay programa definido.</p>'}${footer()}</div>`;
+    }
+
+    // ── Salida ──
+    let html = '';
+    if(CAT_ID){
+      const k = K.find(x => x.id === CAT_ID);
+      if(!k){ out.innerHTML = '<p class="msg-center">Categoría no encontrada.</p>'; return; }
+      html = k.tipo === 'kata' ? kataSheet(k) : kumiteSheet(k);
+      document.title = `${k.nombre} — ${t.nombre}`;
+    } else if(TODO){
+      html = portadaSheet();
+      K.forEach(k => { html += k.tipo === 'kata' ? kataSheet(k) : kumiteSheet(k); });
+      document.title = `Documento completo — ${t.nombre}`;
+    } else {
+      out.innerHTML = '<p class="msg-center">Indica una categoría (&cat=id) o el documento completo (&todo=1).</p>';
+      return;
+    }
+    out.innerHTML = html;
+    document.getElementById('printbar').style.display = 'flex';
+  }
+
+  main();
+</script>
+
+</body>
+</html>
