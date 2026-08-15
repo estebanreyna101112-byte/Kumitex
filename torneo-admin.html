@@ -90,6 +90,15 @@
   td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text-dim);vertical-align:middle;}
   td.name{color:var(--text);font-weight:500;}
   td select{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:#fff;padding:5px 8px;font-size:12px;max-width:180px;}
+  .cat-cell{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-width:180px;}
+  .cbadge{
+    display:inline-flex;align-items:center;gap:5px;
+    border:1px solid rgba(226,38,46,.4);color:var(--accent-2);
+    border-radius:99px;padding:3px 9px;font-size:11px;white-space:nowrap;
+  }
+  .cbadge-x{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:13px;line-height:1;padding:0;}
+  .cbadge-x:hover{color:var(--accent-2);}
+  .row-cat-add{max-width:130px;}
   .table-scroll{overflow-x:auto;}
 
   .cat-card{
@@ -474,7 +483,7 @@
   const SS_KEY = 'kumitex_t_' + SLUG;
   let SECRET = SLUG ? sessionStorage.getItem(SS_KEY) : null;
 
-  let TORNEO = null, COMPS = [], CATS = [];
+  let TORNEO = null, COMPS = [], CATS = [], INSCS = [];
 
   if(!SLUG){
     document.body.innerHTML = '<div class="login-box"><h1>Falta el torneo</h1><p>La URL debe incluir el torneo: <code>torneo-admin.html?t=tu-torneo</code></p></div>';
@@ -516,15 +525,29 @@
 
   // ═══ Carga de datos ═══
   async function loadAll(){
-    const [t, c, k] = await Promise.all([
+    const [t, c, k, i] = await Promise.all([
       sb.from('kumitex_torneos').select('*').eq('slug', SLUG).single(),
       sb.from('kumitex_competidores').select('*').order('created_at'),
-      sb.from('kumitex_categorias').select('*').order('orden').order('created_at')
+      sb.from('kumitex_categorias').select('*').order('orden').order('created_at'),
+      sb.from('kumitex_inscripciones').select('*')
     ]);
     TORNEO = t.data;
     COMPS = (c.data || []).filter(x => x.torneo_id === TORNEO.id);
     CATS = (k.data || []).filter(x => x.torneo_id === TORNEO.id);
+    INSCS = (i.data || []).filter(x => x.torneo_id === TORNEO.id);
     renderAll();
+  }
+
+  // Un competidor puede estar en varias categorías (kumite y kata a la vez)
+  function compsDe(catId){
+    return INSCS.filter(x => x.categoria_id === catId)
+      .map(x => COMPS.find(c => c.id === x.competidor_id))
+      .filter(Boolean);
+  }
+  function catsDe(compId){
+    return INSCS.filter(x => x.competidor_id === compId)
+      .map(x => CATS.find(k => k.id === x.categoria_id))
+      .filter(Boolean);
   }
 
   function renderAll(){
@@ -552,12 +575,12 @@
     $('st-comp').textContent = COMPS.length;
     $('st-cat').textContent = CATS.length;
     $('st-org').textContent = new Set(COMPS.map(c => (c.organizacion || '').trim().toLowerCase()).filter(Boolean)).size;
-    $('st-sincat').textContent = COMPS.filter(c => !c.categoria_id).length;
+    $('st-sincat').textContent = COMPS.filter(c => !INSCS.some(i => i.competidor_id === c.id)).length;
 
-    const catOpts = (sel) => `<option value="">Sin categoría</option>` +
-      CATS.map(k => `<option value="${k.id}" ${k.id === sel ? 'selected' : ''}>${esc(k.nombre)}</option>`).join('');
-
-    $('comp-tbody').innerHTML = rows.map(c => `
+    $('comp-tbody').innerHTML = rows.map(c => {
+      const cats = catsDe(c.id);
+      const disponibles = CATS.filter(k => !cats.some(x => x.id === k.id));
+      return `
       <tr data-id="${c.id}">
         <td class="name">${esc(c.nombre)}</td>
         <td>${esc(c.sexo || '—')}</td>
@@ -566,27 +589,38 @@
         <td>${esc(c.grado || '—')}</td>
         <td>${esc(c.organizacion || '—')}</td>
         <td>${esc(c.pais || '—')}</td>
-        <td><select class="row-cat">${catOpts(c.categoria_id)}</select></td>
+        <td>
+          <div class="cat-cell">
+            ${cats.map(k => `<span class="cbadge">${esc(k.nombre)}<button class="cbadge-x" data-kid="${k.id}" title="Quitar">×</button></span>`).join('')}
+            ${disponibles.length ? `<select class="row-cat-add">
+              <option value="">+ categoría…</option>
+              ${disponibles.map(k => `<option value="${k.id}">${esc(k.nombre)}</option>`).join('')}
+            </select>` : ''}
+          </div>
+        </td>
         <td style="white-space:nowrap;">
           <button class="btn btn-sm btn-ghost row-edit">Editar</button>
           <button class="btn btn-sm btn-danger row-del">×</button>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
     $('comp-empty').style.display = rows.length ? 'none' : 'block';
 
     document.querySelectorAll('#comp-tbody tr').forEach(tr => {
       const id = tr.dataset.id;
-      tr.querySelector('.row-cat').addEventListener('change', async (e) => {
-        await exec('comp_update', { id, categoria_id: e.target.value });
-        const comp = COMPS.find(x => x.id === id);
-        if(comp) comp.categoria_id = e.target.value || null;
-        renderComps(); renderCats();
+      tr.querySelector('.row-cat-add')?.addEventListener('change', async (e) => {
+        if(!e.target.value) return;
+        await exec('insc_add', { competidor_id: id, categoria_id: e.target.value });
+        await loadAll();
       });
+      tr.querySelectorAll('.cbadge-x').forEach(b => b.addEventListener('click', async () => {
+        await exec('insc_del', { competidor_id: id, categoria_id: b.dataset.kid });
+        await loadAll();
+      }));
       tr.querySelector('.row-del').addEventListener('click', async () => {
         if(!confirm('¿Eliminar a este competidor?')) return;
         await exec('comp_delete', { id });
-        COMPS = COMPS.filter(x => x.id !== id);
-        renderComps(); renderCats();
+        await loadAll();
       });
       tr.querySelector('.row-edit').addEventListener('click', () => {
         const c = COMPS.find(x => x.id === id);
@@ -650,7 +684,7 @@
 
   function renderCats(){
     $('cat-list').innerHTML = CATS.map(k => {
-      const n = COMPS.filter(c => c.categoria_id === k.id).length;
+      const n = compsDe(k.id).length;
       return `
       <div class="cat-card" data-id="${k.id}">
         <div class="info">
@@ -760,7 +794,7 @@
     const k = kataCat();
     if(!k) return;
     $('kata-title').textContent = k.nombre;
-    const inscritos = COMPS.filter(c => c.categoria_id === k.id);
+    const inscritos = compsDe(k.id);
     const L = k.llave && Array.isArray(k.llave.rondas) ? k.llave : null;
     const body = $('kata-body');
 
@@ -939,7 +973,7 @@
   }
 
   function generarLlave(cat){
-    const ids = shuffle(COMPS.filter(c => c.categoria_id === cat.id).map(c => c.id));
+    const ids = shuffle(compsDe(cat.id).map(c => c.id));
     const n = ids.length;
     let size = 2;
     while(size < n) size *= 2;
@@ -961,7 +995,7 @@
 
   // Estructura vacía para el armado manual (arrastrar competidores)
   function generarLlaveVacia(cat){
-    const n = COMPS.filter(c => c.categoria_id === cat.id).length;
+    const n = compsDe(cat.id).length;
     let size = 2;
     while(size < n) size *= 2;
     const rondas = [];
@@ -1006,7 +1040,7 @@
     const k = kataCat();
     if(!k) return;
     $('kata-title').textContent = k.nombre;
-    const inscritos = COMPS.filter(c => c.categoria_id === k.id);
+    const inscritos = compsDe(k.id);
     const L = k.llave && Array.isArray(k.llave.rondas) && k.llave.modo === 'kumite' ? k.llave : null;
     const body = $('kata-body');
 
@@ -1348,7 +1382,7 @@
     html += sinAsignar.length ? sinAsignar.map(k => `
       <div class="tat-item">
         <div class="ti-nm">${esc(k.nombre)}</div>
-        <div class="ti-meta">${k.tipo} · ${COMPS.filter(c => c.categoria_id === k.id).length} inscritos</div>
+        <div class="ti-meta">${k.tipo} · ${compsDe(k.id).length} inscritos</div>
         <select class="tat-assign" data-id="${k.id}">
           <option value="">Asignar a tatami…</option>
           ${Array.from({ length: num }, (_, i) => `<option value="${i + 1}">Tatami ${i + 1}</option>`).join('')}
@@ -1367,7 +1401,7 @@
           <div class="ti-top">
             <div>
               <div class="ti-nm"><span class="tat-num-badge">${i + 1}.</span>${esc(k.nombre)}</div>
-              <div class="ti-meta">${k.tipo} · ${COMPS.filter(c => c.categoria_id === k.id).length} inscritos ·
+              <div class="ti-meta">${k.tipo} · ${compsDe(k.id).length} inscritos ·
                 <span style="color:${st.color};">${st.txt}</span></div>
             </div>
             <div class="ti-acts">
@@ -1420,19 +1454,19 @@
   $('tat-auto').addEventListener('click', async () => {
     const num = numTatamis();
     const sinAsignar = CATS.filter(k => !k.tatami)
-      .sort((a, b) => COMPS.filter(c => c.categoria_id === b.id).length - COMPS.filter(c => c.categoria_id === a.id).length);
+      .sort((a, b) => compsDe(b.id).length - compsDe(a.id).length);
     if(!sinAsignar.length) return;
     // reparte a la columna con menos inscritos acumulados
     const carga = {};
     const colas = {};
     for(let n = 1; n <= num; n++){
       colas[n] = CATS.filter(x => x.tatami === n).sort((a, b) => (a.orden || 0) - (b.orden || 0));
-      carga[n] = colas[n].reduce((s, k) => s + COMPS.filter(c => c.categoria_id === k.id).length, 0);
+      carga[n] = colas[n].reduce((s, k) => s + compsDe(k.id).length, 0);
     }
     sinAsignar.forEach(k => {
       const n = Object.keys(carga).sort((a, b) => carga[a] - carga[b])[0];
       colas[n].push(k);
-      carga[n] += COMPS.filter(c => c.categoria_id === k.id).length;
+      carga[n] += compsDe(k.id).length;
     });
     const msg = $('tat-msg');
     msg.textContent = 'Repartiendo…';

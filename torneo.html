@@ -146,6 +146,21 @@
   .ronda-pub .rl .av{font-size:11px;color:var(--ok);}
   .badge.draft{border-color:rgba(255,193,7,.4);color:#ffc107;}
 
+  /* ── Medallero por club ── */
+  .medal-table{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:30px;
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:block;}
+  .medal-table table{width:100%;border-collapse:collapse;}
+  .medal-table th{
+    font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;
+    letter-spacing:.1em;color:var(--text-faint);text-align:left;padding:11px 16px;
+    border-bottom:1px solid var(--border);
+  }
+  .medal-table th.c, .medal-table td.c{text-align:center;width:56px;}
+  .medal-table td{padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text-dim);}
+  .medal-table tr:last-child td{border-bottom:none;}
+  .medal-table td.org{color:var(--text);font-weight:500;}
+  .medal-table td.pos{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);width:34px;}
+
   /* ── Programa por tatami (público) ── */
   .tat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start;margin-bottom:30px;}
   .tat-col{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
@@ -234,6 +249,14 @@
       <div class="stat"><div class="k">Categorías</div><div class="v" id="st-cat">0</div></div>
       <div class="stat"><div class="k">Clubes</div><div class="v" id="st-org">0</div></div>
       <div class="stat"><div class="k">Países</div><div class="v" id="st-pais">0</div></div>
+    </div>
+
+    <div id="medallero-sec" style="display:none;">
+      <h2 class="sec">Medallero por club</h2>
+      <div class="medal-table"><table>
+        <thead><tr><th></th><th>Club / organización</th><th class="c">🥇</th><th class="c">🥈</th><th class="c">🥉</th></tr></thead>
+        <tbody id="medallero-body"></tbody>
+      </table></div>
     </div>
 
     <div id="tatami-sec" style="display:none;">
@@ -330,14 +353,17 @@
       return;
     }
 
-    const [{ data: comps }, { data: cats }] = await Promise.all([
+    const [{ data: comps }, { data: cats }, { data: inscs }] = await Promise.all([
       sb.from('kumitex_competidores').select('*').eq('torneo_id', t.id),
-      sb.from('kumitex_categorias').select('*').eq('torneo_id', t.id).order('orden').order('created_at')
+      sb.from('kumitex_categorias').select('*').eq('torneo_id', t.id).order('orden').order('created_at'),
+      sb.from('kumitex_inscripciones').select('*').eq('torneo_id', t.id)
     ]);
-    render(t, comps || [], cats || []);
+    render(t, comps || [], cats || [], inscs || []);
   }
 
-  function render(t, comps, cats){
+  function render(t, comps, cats, inscs){
+    const compsDe = (catId) => inscs.filter(i => i.categoria_id === catId)
+      .map(i => comps.find(c => c.id === i.competidor_id)).filter(Boolean);
     document.title = `${t.nombre} — Kumitex`;
     document.documentElement.style.setProperty('--accent', t.color_acento || '#e2262e');
     document.documentElement.style.setProperty('--accent-2', t.color_acento || '#ff4a52');
@@ -438,7 +464,7 @@
     }
 
     $('cat-list').innerHTML = pub.map(k => {
-      const inscritos = comps.filter(c => c.categoria_id === k.id);
+      const inscritos = compsDe(k.id);
       const kata = k.tipo === 'kata' ? kataHTML(k) : kumiteHTML(k);
       return `
       <details class="cat">
@@ -459,6 +485,35 @@
       </details>`;
     }).join('');
     $('cat-empty').style.display = pub.length ? 'none' : 'block';
+
+    // ── Medallero por club (según podios de categorías finalizadas) ──
+    const medConteo = {};
+    pub.filter(k => k.llave?.finalizada && Array.isArray(k.llave.podio)).forEach(k => {
+      k.llave.podio.forEach(p => {
+        const comp = comps.find(c => c.id === p.cid);
+        if(!comp) return;
+        const org = (comp.organizacion || 'Sin club').trim();
+        if(!medConteo[org]) medConteo[org] = { oro: 0, plata: 0, bronce: 0 };
+        if(p.lugar === 1) medConteo[org].oro++;
+        else if(p.lugar === 2) medConteo[org].plata++;
+        else if(p.lugar === 3) medConteo[org].bronce++;
+      });
+    });
+    const medFilas = Object.entries(medConteo)
+      .sort((a, b) => (b[1].oro - a[1].oro) || (b[1].plata - a[1].plata) || (b[1].bronce - a[1].bronce));
+    if(medFilas.length){
+      $('medallero-body').innerHTML = medFilas.map(([org, m], i) => `
+        <tr>
+          <td class="pos">${i + 1}</td>
+          <td class="org">${esc(org)}</td>
+          <td class="c">${m.oro}</td>
+          <td class="c">${m.plata}</td>
+          <td class="c">${m.bronce}</td>
+        </tr>`).join('');
+      $('medallero-sec').style.display = 'block';
+    } else {
+      $('medallero-sec').style.display = 'none';
+    }
 
     // ── Programa por tatami ──
     const conTatami = pub.filter(k => k.tatami);
