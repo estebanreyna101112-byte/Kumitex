@@ -139,6 +139,27 @@
       <input id="l-pass" type="password" required autocomplete="current-password"></div>
     <button type="submit" class="btn btn-primary" style="width:100%;" id="login-btn">Ingresar</button>
     <p class="msg err" id="login-msg"></p>
+    <p style="margin-top:14px;text-align:center;">
+      <a href="#" id="olvide-link" style="font-size:12px;color:var(--text-faint);text-decoration:underline;">¿Olvidaste tu contraseña?</a>
+    </p>
+  </form>
+
+  <form id="rec-form" style="display:none;">
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">
+      Ingresa tu email y el <strong>código de recuperación</strong> que guardaste al crear tu cuenta.
+      ¿No lo tienes? Escríbenos y te ayudamos a recuperar el acceso.
+    </p>
+    <div class="field"><label for="rc-email">Email</label>
+      <input id="rc-email" type="email" required placeholder="tu@correo.com" autocomplete="email"></div>
+    <div class="field"><label for="rc-codigo">Código de recuperación</label>
+      <input id="rc-codigo" type="text" required placeholder="XXXX-XXXX-XXXX-XXXX" style="font-family:'JetBrains Mono',monospace;text-transform:uppercase;"></div>
+    <div class="field"><label for="rc-pass">Nueva contraseña (mín. 8)</label>
+      <input id="rc-pass" type="password" required minlength="8" autocomplete="new-password"></div>
+    <button type="submit" class="btn btn-primary" style="width:100%;" id="rec-btn">Restablecer y entrar</button>
+    <p class="msg err" id="rec-msg"></p>
+    <p style="margin-top:14px;text-align:center;">
+      <a href="#" id="rec-volver" style="font-size:12px;color:var(--text-faint);text-decoration:underline;">← Volver a iniciar sesión</a>
+    </p>
   </form>
 
   <form id="reg-form" style="display:none;">
@@ -153,6 +174,17 @@
     <button type="submit" class="btn btn-primary" style="width:100%;" id="reg-btn">Crear mi cuenta</button>
     <p class="msg err" id="reg-msg"></p>
   </form>
+</div>
+
+<!-- ════ CÓDIGO DE RECUPERACIÓN (se muestra una vez) ════ -->
+<div id="codigo-view" class="auth-box" style="display:none;">
+  <h1>Guarda tu código de recuperación</h1>
+  <p class="sub">Es la única forma de restablecer tu contraseña si la olvidas. Guárdalo en un lugar seguro — <strong>no se volverá a mostrar</strong>.</p>
+  <div style="background:var(--surface);border:1px dashed var(--accent);border-radius:12px;padding:22px;text-align:center;margin-bottom:18px;">
+    <div id="codigo-txt" style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;letter-spacing:.06em;color:var(--accent-2);"></div>
+  </div>
+  <button class="btn btn-ghost" id="codigo-copiar" style="width:100%;margin-bottom:10px;">📋 Copiar código</button>
+  <button class="btn btn-primary" id="codigo-listo" style="width:100%;">Ya lo guardé — continuar</button>
 </div>
 
 <!-- ════ DASHBOARD ════ -->
@@ -234,7 +266,58 @@
     }
     TOKEN = data.token;
     localStorage.setItem(TK, TOKEN);
+    mostrarCodigo(data.codigo_recuperacion);
+  });
+
+  // ═══ Código de recuperación (se muestra una sola vez) ═══
+  function mostrarCodigo(codigo){
+    $('auth-view').style.display = 'none';
+    $('dash-view').style.display = 'none';
+    $('codigo-view').style.display = 'block';
+    $('codigo-txt').textContent = codigo;
+  }
+  $('codigo-copiar').addEventListener('click', async () => {
+    try{
+      await navigator.clipboard.writeText($('codigo-txt').textContent);
+      $('codigo-copiar').textContent = '✓ Copiado';
+      setTimeout(() => $('codigo-copiar').textContent = '📋 Copiar código', 2000);
+    }catch(e){ /* clipboard no disponible */ }
+  });
+  $('codigo-listo').addEventListener('click', () => {
+    $('codigo-view').style.display = 'none';
     entrar();
+  });
+
+  // ═══ Recuperación de contraseña ═══
+  $('olvide-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    $('login-form').style.display = 'none';
+    $('rec-form').style.display = 'block';
+  });
+  $('rec-volver').addEventListener('click', (e) => {
+    e.preventDefault();
+    $('rec-form').style.display = 'none';
+    $('login-form').style.display = 'block';
+  });
+  $('rec-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('rec-btn');
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    const { data, error } = await sb.rpc('kumitex_recuperar', {
+      p_email: $('rc-email').value.trim(),
+      p_codigo: $('rc-codigo').value.trim(),
+      p_nueva: $('rc-pass').value
+    });
+    btn.disabled = false; btn.textContent = 'Restablecer y entrar';
+    if(error || !data?.ok){
+      $('rec-msg').textContent = data?.error === 'codigo_invalido'
+        ? 'Email o código incorrectos.' : 'No se pudo restablecer.';
+      return;
+    }
+    TOKEN = data.token;
+    localStorage.setItem(TK, TOKEN);
+    // el código usado se quema: mostrar el nuevo
+    mostrarCodigo(data.codigo_recuperacion);
   });
 
   // ═══ Login ═══

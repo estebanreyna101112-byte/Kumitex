@@ -151,6 +151,26 @@
   </section>
 
   <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-5">
+    <p class="section-title">Cuentas de clientes</p>
+    <p class="text-sm text-[var(--text-dim)]">Los clientes se registran solos en <span class="font-mono text-xs">cuenta.html</span>. Si uno pierde su contraseña y su código de recuperación, restablécela aquí.</p>
+    <div id="cuentas-list" class="flex flex-col gap-2.5"></div>
+    <form id="reset-cuenta-form" class="grid sm:grid-cols-3 gap-4 border-t hairline pt-4">
+      <div>
+        <label class="field-label" for="rst-email">Email de la cuenta</label>
+        <input id="rst-email" type="email" required placeholder="cliente@correo.com" class="field">
+      </div>
+      <div>
+        <label class="field-label" for="rst-pass">Nueva contraseña (mín. 8)</label>
+        <input id="rst-pass" type="text" required minlength="8" placeholder="La que le entregarás" class="field">
+      </div>
+      <div class="flex items-end gap-3">
+        <button type="submit" class="btn-ghost px-4 py-2.5 text-sm rounded-md">Restablecer</button>
+        <span id="rst-status" class="text-sm"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="bg-[var(--surface)] border hairline rounded-xl p-6 flex flex-col gap-5">
     <p class="section-title">Solicitudes recibidas</p>
     <p class="text-sm text-[var(--text-dim)]">Las cotizaciones enviadas por los clientes se guardan en Supabase.</p>
     <a href="https://supabase.com/dashboard/project/rldtkomtclolhbmrphgh/editor" target="_blank" rel="noopener" class="btn-ghost inline-flex w-fit px-5 py-2.5 text-sm rounded-md">Abrir tabla de solicitudes →</a>
@@ -216,6 +236,7 @@
     CONFIG = data.config;
     renderConfig();
     loadTorneos();
+    loadCuentas();
   }
 
   // ═══ Render de configuración ═══
@@ -334,6 +355,42 @@
     setTimeout(() => st.textContent = '', 2500);
     $('torneo-form').reset();
     loadTorneos();
+  });
+
+  // ═══ Cuentas de clientes ═══
+  async function loadCuentas(){
+    const { data } = await sb.rpc('kumitex_listar_cuentas', { p_master: SECRET });
+    const list = $('cuentas-list');
+    if(!data?.ok || !data.cuentas?.length){
+      list.innerHTML = '<p class="text-sm text-[var(--text-faint)]">Aún no hay cuentas registradas.</p>';
+      return;
+    }
+    list.innerHTML = data.cuentas.map(c => `
+      <div class="flex items-center justify-between gap-3 flex-wrap border hairline rounded-lg px-4 py-3 bg-[var(--surface-2)]">
+        <div>
+          <p class="font-semibold text-sm">${c.nombre || '(sin nombre)'} <span class="text-[var(--text-faint)] font-normal">· ${c.email}</span></p>
+          <p class="font-mono text-[10px] uppercase tracking-widest text-[var(--text-faint)] mt-0.5">${c.organizacion || 'sin organización'} · ${c.torneos} torneo(s)</p>
+        </div>
+      </div>`).join('');
+  }
+
+  $('reset-cuenta-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const st = $('rst-status');
+    st.textContent = '';
+    const { data, error } = await sb.rpc('kumitex_reset_cuenta', {
+      p_master: SECRET,
+      p_email: $('rst-email').value.trim(),
+      p_nueva: $('rst-pass').value
+    });
+    if(error || !data?.ok){
+      st.textContent = data?.error === 'cuenta_no_existe' ? 'Esa cuenta no existe.' : 'Error al restablecer.';
+      st.style.color = 'var(--accent-2)';
+      return;
+    }
+    st.textContent = `✓ Lista. Nuevo código de recuperación: ${data.codigo_recuperacion}`;
+    st.style.color = 'var(--ok)';
+    $('reset-cuenta-form').reset();
   });
 
   // ═══ Cambiar contraseña ═══
