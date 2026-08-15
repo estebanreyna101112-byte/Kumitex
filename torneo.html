@@ -145,6 +145,25 @@
   .ronda-pub .rl .av{font-size:11px;color:var(--ok);}
   .badge.draft{border-color:rgba(255,193,7,.4);color:#ffc107;}
 
+  /* ── Llave de kumite (pública) ── */
+  .br-scroll{overflow-x:auto;padding:4px 0 8px;}
+  .br-wrap{display:flex;gap:14px;min-width:max-content;align-items:stretch;}
+  .br-col{display:flex;flex-direction:column;gap:8px;min-width:180px;}
+  .br-col-inner{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:8px;}
+  .br-col-title{
+    font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--text-faint);text-align:center;
+  }
+  .br-match{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface-2);}
+  .br-slot{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:7px 10px;font-size:12.5px;border-bottom:1px solid var(--border);color:var(--text);
+  }
+  .br-slot:last-child{border-bottom:none;}
+  .br-slot .borg{font-size:10px;color:var(--text-faint);display:block;}
+  .br-slot.empty{color:var(--text-faint);font-style:italic;}
+  .br-slot.win{background:var(--accent-soft);color:var(--accent-2);font-weight:600;}
+
   @media(max-width:560px){
     .stat-row{grid-template-columns:1fr 1fr;}
   }
@@ -350,15 +369,55 @@
       return h;
     }
 
+    function kumiteHTML(k){
+      const L = k.llave;
+      if(!L || L.modo !== 'kumite' || !Array.isArray(L.rondas) || !L.rondas.length) return null;
+      const total = L.rondas.length;
+      const nombreRonda = (i) => i === total - 1 ? 'Final'
+        : i === total - 2 ? 'Semifinales'
+        : i === total - 3 ? 'Cuartos de final'
+        : `Ronda ${i + 1}`;
+      const orgDe = (cid) => {
+        const c = comps.find(x => x.id === cid);
+        return c ? [c.organizacion, c.pais].filter(Boolean).join(' · ') : '';
+      };
+      const medallas = { 1: '🥇', 2: '🥈', 3: '🥉' };
+      let h = '';
+      if(L.finalizada && L.podio?.length){
+        h += `<div class="podio-pub">${L.podio.map(p => `
+          <div class="pl"><span class="m">${medallas[p.lugar] || ''}</span>
+            <span>${esc(nombreDe(p.cid))}</span></div>`).join('')}
+        </div>`;
+      }
+      h += '<div class="br-scroll"><div class="br-wrap">';
+      L.rondas.forEach((ronda, r) => {
+        h += `<div class="br-col"><div class="br-col-title">${nombreRonda(r)}</div><div class="br-col-inner">`;
+        ronda.forEach(m => {
+          const bye = (m.a && !m.b) || (!m.a && m.b);
+          const slot = (cid) => {
+            if(!cid) return `<div class="br-slot empty">${r === 0 ? (bye ? 'BYE' : '—') : 'Por definir'}</div>`;
+            return `<div class="br-slot ${m.g === cid ? 'win' : ''}">
+              <span>${esc(nombreDe(cid))}<span class="borg">${esc(orgDe(cid))}</span></span>
+              ${m.g === cid ? '<span>✓</span>' : ''}
+            </div>`;
+          };
+          h += `<div class="br-match">${slot(m.a)}${slot(m.b)}</div>`;
+        });
+        h += '</div></div>';
+      });
+      h += '</div></div>';
+      return h;
+    }
+
     $('cat-list').innerHTML = pub.map(k => {
       const inscritos = comps.filter(c => c.categoria_id === k.id);
-      const kata = k.tipo === 'kata' ? kataHTML(k) : null;
+      const kata = k.tipo === 'kata' ? kataHTML(k) : kumiteHTML(k);
       return `
       <details class="cat">
         <summary>
           <span class="cat-nm">${esc(k.nombre)} <span class="badge tipo">${k.tipo}</span>
             ${PRUEBA_OK && k.estado !== 'publicada' ? '<span class="badge draft">borrador · no visible</span>' : ''}
-            ${k.tipo === 'kata' && k.llave?.finalizada ? '<span class="badge" style="border-color:rgba(62,207,110,.4);color:var(--ok);">finalizada</span>' : ''}
+            ${k.llave?.finalizada ? '<span class="badge" style="border-color:rgba(62,207,110,.4);color:var(--ok);">finalizada</span>' : ''}
           </span>
           <span class="cat-n">${inscritos.length} inscrito${inscritos.length === 1 ? '' : 's'} ▾</span>
         </summary>

@@ -174,6 +174,35 @@
   .podio-line .medal{font-size:20px;width:28px;text-align:center;}
   .podio-line .pp{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-dim);}
 
+  /* ── Llave de kumite ── */
+  .br-scroll{overflow-x:auto;padding-bottom:8px;}
+  .br-wrap{display:flex;gap:16px;min-width:max-content;align-items:stretch;}
+  .br-col{display:flex;flex-direction:column;gap:10px;min-width:200px;}
+  .br-col-inner{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:10px;}
+  .br-col-title{
+    font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--text-faint);text-align:center;
+  }
+  .br-match{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface-2);}
+  .br-slot{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:8px 11px;font-size:13px;border-bottom:1px solid var(--border);cursor:pointer;
+    transition:background .15s ease;
+  }
+  .br-slot:last-child{border-bottom:none;}
+  .br-slot:hover{background:rgba(255,255,255,.03);}
+  .br-slot .borg{font-size:10px;color:var(--text-faint);display:block;}
+  .br-slot.empty{color:var(--text-faint);font-style:italic;cursor:default;}
+  .br-slot.empty:hover{background:none;}
+  .br-slot.win{background:var(--accent-soft);color:var(--accent-2);font-weight:600;}
+  .br-slot.win .bcheck{color:var(--accent-2);}
+  .br-slot .bcheck{font-size:12px;opacity:0;}
+  .br-slot.win .bcheck{opacity:1;}
+  .br-slot.sel-swap{outline:2px solid var(--accent);outline-offset:-2px;}
+  .br-hint{font-size:12px;color:var(--text-faint);margin-bottom:12px;line-height:1.5;}
+  .br-warn{font-size:12px;color:#ffc107;margin-bottom:12px;}
+  .swap-on{border-color:var(--accent) !important;color:var(--accent-2) !important;}
+
   @media(max-width:640px){
     .fg-2,.fg-3,.fg-4{grid-template-columns:1fr;}
     .stat-row{grid-template-columns:1fr 1fr;}
@@ -560,7 +589,7 @@
           <div class="meta">${catFiltroTxt(k)} · <strong>${n} inscrito${n === 1 ? '' : 's'}</strong></div>
         </div>
         <div class="acts">
-          ${k.tipo === 'kata' ? '<button class="btn btn-sm btn-primary k-kata">Evaluar kata</button>' : ''}
+          ${k.tipo === 'kata' ? '<button class="btn btn-sm btn-primary k-kata">Evaluar kata</button>' : '<button class="btn btn-sm btn-primary k-kata">Llave</button>'}
           <button class="btn btn-sm btn-ghost k-auto">Auto-asignar</button>
           <button class="btn btn-sm btn-ghost k-pub">${k.estado === 'publicada' ? 'Ocultar' : 'Publicar'}</button>
           <button class="btn btn-sm btn-danger k-del">×</button>
@@ -625,9 +654,18 @@
 
   function openKata(id){
     KATA_ID = id;
+    SWAP_MODE = false;
+    SWAP_SEL = null;
     $('kata-modal').classList.add('open');
     document.body.style.overflow = 'hidden';
-    renderKata();
+    renderEval();
+  }
+
+  function renderEval(){
+    const k = kataCat();
+    if(!k) return;
+    if(k.tipo === 'kata') renderKata();
+    else renderLlave();
   }
   function closeKata(){
     $('kata-modal').classList.remove('open');
@@ -643,7 +681,7 @@
     k.llave = llave;
     const r = await exec('cat_update', { id: KATA_ID, llave });
     if(!r.ok) alert('No se pudo guardar: ' + (r.error || ''));
-    renderKata();
+    renderEval();
   }
 
   function renderKata(){
@@ -765,6 +803,273 @@
       });
     } else {
       $('kata-reopen')?.addEventListener('click', () => {
+        L.finalizada = false;
+        L.podio = [];
+        saveKata(L);
+      });
+    }
+  }
+
+  // ═══ Llave de kumite ═══
+  // Estructura en categoria.llave:
+  // { modo:'kumite', size, rondas:[[{a,b,g}...]...], finalizada, podio:[{cid,lugar}] }
+  let SWAP_MODE = false;
+  let SWAP_SEL = null; // {r, m, lado}
+
+  function shuffle(arr){
+    const a = [...arr];
+    for(let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // Orden clásico de siembra: para size=8 → [1,8,4,5,2,7,3,6];
+  // los BYEs (siembras > n) quedan repartidos por toda la llave
+  function genSeeds(size){
+    let arr = [1];
+    while(arr.length < size){
+      const m = arr.length * 2 + 1;
+      const next = [];
+      arr.forEach(s => next.push(s, m - s));
+      arr = next;
+    }
+    return arr;
+  }
+
+  function propagar(L, r, i, cid){
+    L.rondas[r][i].g = cid;
+    if(r + 1 < L.rondas.length){
+      const t = L.rondas[r + 1][Math.floor(i / 2)];
+      if(i % 2 === 0) t.a = cid; else t.b = cid;
+    }
+  }
+
+  function limpiarDesde(L, r, i){
+    const m = L.rondas[r][i];
+    if(!m.g) return;
+    m.g = null;
+    if(r + 1 < L.rondas.length){
+      const ti = Math.floor(i / 2);
+      const t = L.rondas[r + 1][ti];
+      if(i % 2 === 0) t.a = null; else t.b = null;
+      limpiarDesde(L, r + 1, ti);
+    }
+  }
+
+  function autoByes(L){
+    L.rondas[0].forEach((m, i) => {
+      if(m.a && !m.b) propagar(L, 0, i, m.a);
+      else if(!m.a && m.b) propagar(L, 0, i, m.b);
+    });
+  }
+
+  function generarLlave(cat){
+    const ids = shuffle(COMPS.filter(c => c.categoria_id === cat.id).map(c => c.id));
+    const n = ids.length;
+    let size = 2;
+    while(size < n) size *= 2;
+    const seeds = genSeeds(size);
+    const slots = new Array(size).fill(null);
+    seeds.forEach((seed, pos) => { if(seed <= n) slots[pos] = ids[seed - 1]; });
+
+    const rondas = [];
+    const r1 = [];
+    for(let i = 0; i < size; i += 2) r1.push({ a: slots[i], b: slots[i + 1], g: null });
+    rondas.push(r1);
+    for(let m = size / 4; m >= 1; m = m / 2){
+      rondas.push(Array.from({ length: m }, () => ({ a: null, b: null, g: null })));
+    }
+    const L = { modo: 'kumite', size, rondas, finalizada: false, podio: [] };
+    autoByes(L);
+    return L;
+  }
+
+  function nombreRonda(i, total){
+    if(i === total - 1) return 'Final';
+    if(i === total - 2) return 'Semifinales';
+    if(i === total - 3) return 'Cuartos de final';
+    return `Ronda ${i + 1}`;
+  }
+
+  function esBye(m){ return (m.a && !m.b) || (!m.a && m.b); }
+
+  function podioKumite(L){
+    const total = L.rondas.length;
+    const final = L.rondas[total - 1][0];
+    if(!final.g) return null;
+    const podio = [
+      { cid: final.g, lugar: 1 },
+      { cid: final.a === final.g ? final.b : final.a, lugar: 2 }
+    ].filter(p => p.cid);
+    if(total >= 2){
+      L.rondas[total - 2].forEach(m => {
+        if(m.g){
+          const perdedor = m.a === m.g ? m.b : m.a;
+          if(perdedor) podio.push({ cid: perdedor, lugar: 3 });
+        }
+      });
+    }
+    return podio;
+  }
+
+  function renderLlave(){
+    const k = kataCat();
+    if(!k) return;
+    $('kata-title').textContent = k.nombre;
+    const inscritos = COMPS.filter(c => c.categoria_id === k.id);
+    const L = k.llave && Array.isArray(k.llave.rondas) && k.llave.modo === 'kumite' ? k.llave : null;
+    const body = $('kata-body');
+
+    if(!L){
+      body.innerHTML = `
+        <p class="br-hint">
+          Hay <strong>${inscritos.length}</strong> competidor(es) en esta categoría.
+          El sorteo es aleatorio y los BYE (pases directos) se reparten automáticamente.
+          Luego marcas al ganador de cada combate tocándolo, y puedes intercambiar
+          posiciones antes de empezar.
+        </p>
+        ${inscritos.length >= 2 ? '<button class="btn btn-primary" id="br-gen">Generar llave</button>'
+          : '<p style="font-size:13px;color:var(--accent-2);">Se necesitan al menos 2 competidores.</p>'}`;
+      $('br-gen')?.addEventListener('click', () => saveKata(generarLlave(k)));
+      return;
+    }
+
+    const enLlave = new Set();
+    L.rondas[0].forEach(m => { if(m.a) enLlave.add(m.a); if(m.b) enLlave.add(m.b); });
+    const faltantes = inscritos.filter(c => !enLlave.has(c.id)).length;
+    const hayResultados = L.rondas.some(r => r.some(m => m.g && !(esBye(m))));
+    const total = L.rondas.length;
+    const final = L.rondas[total - 1][0];
+
+    let html = '';
+    if(faltantes > 0){
+      html += `<p class="br-warn">⚠ Hay ${faltantes} inscrito(s) que no están en la llave. Regenera el sorteo para incluirlos.</p>`;
+    }
+
+    if(L.finalizada && L.podio?.length){
+      const medallas = { 1: '🥇', 2: '🥈', 3: '🥉' };
+      html += `<div class="podio-box">
+        ${L.podio.map(p => `
+          <div class="podio-line">
+            <span class="medal">${medallas[p.lugar] || ''}</span>
+            <span>${esc(compNombre(p.cid))}</span>
+          </div>`).join('')}
+      </div>`;
+    }
+
+    if(!L.finalizada){
+      html += SWAP_MODE
+        ? '<p class="br-hint" style="color:var(--accent-2);">Modo intercambio: toca dos posiciones de la primera ronda para intercambiarlas. Los resultados marcados se borrarán.</p>'
+        : '<p class="br-hint">Toca un competidor para marcarlo como ganador del combate; tócalo de nuevo para deshacer.</p>';
+    }
+
+    html += '<div class="br-scroll"><div class="br-wrap">';
+    L.rondas.forEach((ronda, r) => {
+      html += `<div class="br-col"><div class="br-col-title">${nombreRonda(r, total)}</div><div class="br-col-inner">`;
+      ronda.forEach((m, i) => {
+        const slot = (cid, lado) => {
+          if(!cid){
+            const txt = r === 0 ? (esBye(m) ? 'BYE' : '—') : 'Por definir';
+            return `<div class="br-slot empty">${txt}</div>`;
+          }
+          const win = m.g === cid;
+          const swapSel = SWAP_SEL && SWAP_SEL.r === r && SWAP_SEL.m === i && SWAP_SEL.lado === lado;
+          return `<div class="br-slot ${win ? 'win' : ''} ${swapSel ? 'sel-swap' : ''}"
+            data-r="${r}" data-m="${i}" data-lado="${lado}">
+            <span>${esc(compNombre(cid))}<span class="borg">${esc(compOrg(cid))}</span></span>
+            <span class="bcheck">✓</span>
+          </div>`;
+        };
+        html += `<div class="br-match">${slot(m.a, 'a')}${slot(m.b, 'b')}</div>`;
+      });
+      html += '</div></div>';
+    });
+    html += '</div></div>';
+
+    if(!L.finalizada){
+      html += `<div class="kata-actions">
+        <button class="btn btn-primary" id="br-fin" ${final.g ? '' : 'disabled'}>Finalizar y asignar podio</button>
+        <button class="btn btn-ghost ${SWAP_MODE ? 'swap-on' : ''}" id="br-swap">${SWAP_MODE ? 'Salir del intercambio' : 'Intercambiar posiciones'}</button>
+        <button class="btn btn-ghost" id="br-regen">Regenerar sorteo</button>
+        <button class="btn btn-danger btn-sm" id="br-reset" style="margin-left:auto;">Quitar llave</button>
+      </div>`;
+    } else {
+      html += `<div class="kata-actions"><button class="btn btn-ghost" id="br-reopen">Reabrir llave</button></div>`;
+    }
+
+    body.innerHTML = html;
+
+    // ── Interacciones ──
+    if(!L.finalizada){
+      body.querySelectorAll('.br-slot[data-r]').forEach(el => {
+        el.addEventListener('click', () => {
+          const r = parseInt(el.dataset.r, 10);
+          const i = parseInt(el.dataset.m, 10);
+          const lado = el.dataset.lado;
+          const m = L.rondas[r][i];
+          const cid = lado === 'a' ? m.a : m.b;
+          if(!cid) return;
+
+          if(SWAP_MODE){
+            if(r !== 0){ alert('Solo se pueden intercambiar posiciones de la primera ronda.'); return; }
+            if(!SWAP_SEL){ SWAP_SEL = { r, m: i, lado }; renderEval(); return; }
+            if(SWAP_SEL.m === i && SWAP_SEL.lado === lado){ SWAP_SEL = null; renderEval(); return; }
+            if(hayResultados && !confirm('Al intercambiar se borran los resultados marcados. ¿Continuar?')){ SWAP_SEL = null; renderEval(); return; }
+            const m1 = L.rondas[0][SWAP_SEL.m], m2 = L.rondas[0][i];
+            const v1 = SWAP_SEL.lado === 'a' ? m1.a : m1.b;
+            const v2 = lado === 'a' ? m2.a : m2.b;
+            if(SWAP_SEL.lado === 'a') m1.a = v2; else m1.b = v2;
+            if(lado === 'a') m2.a = v1; else m2.b = v1;
+            // reiniciar resultados y rearmar rondas siguientes
+            for(let rr = 1; rr < L.rondas.length; rr++) L.rondas[rr].forEach(x => { x.a = null; x.b = null; x.g = null; });
+            L.rondas[0].forEach(x => x.g = null);
+            autoByes(L);
+            SWAP_SEL = null;
+            SWAP_MODE = false;
+            saveKata(L);
+            return;
+          }
+
+          if(esBye(m)) return; // los BYE avanzan solos
+          if(m.g === cid){
+            const tieneDespues = r + 1 < L.rondas.length && L.rondas[r + 1][Math.floor(i / 2)].g;
+            if(tieneDespues && !confirm('Este resultado tiene combates posteriores marcados; se borrarán. ¿Continuar?')) return;
+            limpiarDesde(L, r, i);
+            saveKata(L);
+            return;
+          }
+          if(!m.a || !m.b) return; // combate incompleto
+          if(m.g && m.g !== cid){
+            const tieneDespues = r + 1 < L.rondas.length && L.rondas[r + 1][Math.floor(i / 2)].g;
+            if(tieneDespues && !confirm('Cambiar el ganador borra los combates posteriores marcados. ¿Continuar?')) return;
+            limpiarDesde(L, r, i);
+          }
+          propagar(L, r, i, cid);
+          saveKata(L);
+        });
+      });
+
+      $('br-fin')?.addEventListener('click', () => {
+        if(!confirm('¿Finalizar la categoría? Se asignará el podio: oro y plata de la final, bronce para los semifinalistas.')) return;
+        const p = podioKumite(L);
+        if(!p){ alert('Falta marcar el ganador de la final.'); return; }
+        L.podio = p;
+        L.finalizada = true;
+        saveKata(L);
+      });
+      $('br-swap')?.addEventListener('click', () => { SWAP_MODE = !SWAP_MODE; SWAP_SEL = null; renderEval(); });
+      $('br-regen')?.addEventListener('click', () => {
+        if(!confirm('¿Regenerar el sorteo? Se pierde la llave actual y sus resultados.')) return;
+        saveKata(generarLlave(k));
+      });
+      $('br-reset')?.addEventListener('click', () => {
+        if(!confirm('¿Quitar la llave por completo?')) return;
+        saveKata(null);
+      });
+    } else {
+      $('br-reopen')?.addEventListener('click', () => {
         L.finalizada = false;
         L.podio = [];
         saveKata(L);
