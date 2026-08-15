@@ -1,0 +1,13 @@
+<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-label="Kumitex">
+  <!--
+    Isotipo Kumitex: una "K" construida con líneas de llave de torneo.
+    Los dos brazos entran como llaves (brackets) y convergen en el tallo:
+    la línea del campeón. Fondo 100% transparente, funciona en claro y oscuro.
+  -->
+  <!-- tallo -->
+  <path d="M21 13 V83" stroke="#e2262e" stroke-width="13" stroke-linecap="round"/>
+  <!-- brazo superior (llave) -->
+  <path d="M81 13 H57 V41.5 H27.5" stroke="#e2262e" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- brazo inferior (llave) -->
+  <path d="M81 83 H57 V54.5 H27.5" stroke="#e2262e" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kumitex — Infraestructura digital para torneos de karate</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -147,9 +148,7 @@
   <div class="max-w-7xl mx-auto px-6 lg:px-10">
     <div class="flex items-center justify-between h-[68px]">
       <a href="#top" class="font-display font-semibold text-lg tracking-tight flex items-center gap-2.5">
-        <span class="inline-flex w-8 h-8 rounded-md bg-white items-center justify-center p-1.5 shrink-0">
-          <img src="assets/img-1.png" alt="Kumitex" class="w-full h-full object-contain">
-        </span>
+        <img src="assets/logo.svg" alt="Kumitex" class="w-8 h-8 shrink-0">
         KUMITEX
       </a>
 
@@ -171,18 +170,19 @@
     </div>
   </div>
 
-  <!-- mobile menu -->
-  <div id="mobile-menu" class="lg:hidden fixed inset-0 top-[68px] bg-[var(--bg)] translate-x-full opacity-0 pointer-events-none">
-    <div class="flex flex-col px-6 py-8 gap-6 text-xl font-display">
-      <a href="#top" class="mobile-link">Inicio</a>
-      <a href="#ejemplo" class="mobile-link">Ejemplos</a>
-      <a href="#funcionalidades" class="mobile-link">Funcionalidades</a>
-      <a href="#proceso" class="mobile-link">Cómo funciona</a>
-      <a href="#contacto" class="mobile-link">Contacto</a>
-      <a href="cotizar.html" class="mobile-link btn-primary text-center py-3 mt-4 font-sans text-base">Solicitar una demo</a>
-    </div>
-  </div>
 </header>
+
+<!-- mobile menu: fuera del header porque su backdrop-filter rompe position:fixed de los hijos -->
+<div id="mobile-menu" class="lg:hidden fixed left-0 right-0 top-[68px] bottom-0 z-40 translate-x-full opacity-0 pointer-events-none" style="background:var(--bg);">
+  <div class="flex flex-col px-6 py-8 gap-6 text-xl font-display">
+    <a href="#top" class="mobile-link">Inicio</a>
+    <a href="#ejemplo" class="mobile-link">Ejemplos</a>
+    <a href="#funcionalidades" class="mobile-link">Funcionalidades</a>
+    <a href="#proceso" class="mobile-link">Cómo funciona</a>
+    <a href="#contacto" class="mobile-link">Contacto</a>
+    <a href="cotizar.html" class="mobile-link btn-primary text-center py-3 mt-4 font-sans text-base">Solicitar una demo</a>
+  </div>
+</div>
 
 <main id="top">
 
@@ -844,9 +844,7 @@
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
       <div class="lg:col-span-2">
         <a href="#top" class="font-display font-semibold text-lg tracking-tight flex items-center gap-2.5 mb-4">
-          <span class="inline-flex w-9 h-9 rounded-md bg-white items-center justify-center p-1.5 shrink-0">
-            <img src="assets/img-1.png" alt="Kumitex" class="w-full h-full object-contain">
-          </span>
+          <img src="assets/logo.svg" alt="Kumitex" class="w-9 h-9 shrink-0">
           KUMITEX
         </a>
         <p class="text-[var(--text-faint)] text-sm leading-relaxed max-w-xs">Digital infrastructure for modern karate tournaments.</p>

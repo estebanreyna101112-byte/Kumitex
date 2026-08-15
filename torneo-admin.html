@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel del torneo — Kumitex</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
 <meta name="robots" content="noindex, nofollow">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +35,7 @@
   header.top{border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:30;}
   .top-inner{height:60px;display:flex;align-items:center;justify-content:space-between;gap:14px;}
   .brand{display:flex;align-items:center;gap:10px;min-width:0;}
-  .brand img{width:30px;height:30px;border-radius:7px;object-fit:contain;background:rgba(255,255,255,.95);padding:3px;flex:0 0 auto;}
+  .brand img{width:30px;height:30px;object-fit:contain;flex:0 0 auto;}
   .brand .tn{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .brand .sub{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent-2);}
   .top-actions{display:flex;align-items:center;gap:14px;flex:0 0 auto;}
@@ -278,7 +279,7 @@
     <div class="wrap">
       <div class="top-inner">
         <div class="brand">
-          <img src="Logo.png" alt="Kumitex" id="brand-logo">
+          <img src="assets/logo.svg" alt="Kumitex" id="brand-logo">
           <div style="min-width:0;">
             <div class="sub">Panel del torneo</div>
             <div class="tn" id="torneo-nombre">…</div>
