@@ -491,7 +491,8 @@
             if(!L || L.armado || !Array.isArray(L.rondas)) return;
             L.rondas.forEach((ronda, r) => {
               ronda.forEach((m, i) => {
-                const bye = (r === 0 && (!m.a || !m.b)) || (r > 0 && (2 * i + 1 >= L.rondas[r - 1].length));
+                const paseEstructural = r > 0 && (L.feeds && L.feeds[r] ? L.feeds[r][i][1] === null : (2 * i + 1 >= L.rondas[r - 1].length));
+                const bye = (r === 0 && (!m.a || !m.b)) || paseEstructural;
                 if(bye) return;
                 n++;
                 mapa[k.id + ':' + r + ':' + i] = n;
@@ -529,7 +530,7 @@
           const bye = (m.a && !m.b) || (!m.a && m.b);
           // la llave se ajusta a los competidores: los BYE de la primera ronda no se dibujan
           if(r === 0 && (bye || (!m.a && !m.b))) return;
-          const pase = r > 0 && (2 * i + 1 >= L.rondas[r - 1].length);
+          const pase = r > 0 && (L.feeds && L.feeds[r] ? L.feeds[r][i][1] === null : (2 * i + 1 >= L.rondas[r - 1].length));
           const slot = (cid, lado) => {
             if(!cid) return `<div class="br-slot empty">${r === 0 ? (bye ? 'BYE' : '—') : (pase && lado === 'b' ? 'Pasa directo' : 'Por definir')}</div>`;
             return `<div class="br-slot ${m.g === cid ? 'win' : ''}">

@@ -870,7 +870,8 @@
       if(!L || L.armado || !Array.isArray(L.rondas)) return;
       L.rondas.forEach((ronda, r) => {
         ronda.forEach((m, i) => {
-          const bye = (r === 0 && (!m.a || !m.b)) || (r > 0 && (2 * i + 1 >= L.rondas[r - 1].length));
+          const paseEstructural = r > 0 && (L.feeds && L.feeds[r] ? L.feeds[r][i][1] === null : (2 * i + 1 >= L.rondas[r - 1].length));
+          const bye = (r === 0 && (!m.a || !m.b)) || paseEstructural;
           if(bye) return;
           n++;
           mapa[k.id + ':' + r + ':' + i] = n;
@@ -1055,9 +1056,27 @@
   }
 
   // El combate j de la ronda r no tiene rival estructural (pasa directo)
-  // cuando su casilla b no recibe ganador de ningún combate anterior
+  // cuando su casilla b no recibe ganador de ningún combate anterior.
+  // Las llaves nuevas guardan el cableado explícito en L.feeds (determinado
+  // en el sorteo inicial); las antiguas usan la fórmula clásica.
   function byeEstructural(L, r, j){
-    return r > 0 && (2 * j + 1 >= L.rondas[r - 1].length);
+    if(r === 0) return false;
+    if(L.feeds && L.feeds[r]) return L.feeds[r][j][1] === null;
+    return 2 * j + 1 >= L.rondas[r - 1].length;
+  }
+
+  // ¿A qué combate y casilla de la ronda siguiente avanza el ganador de (r, i)?
+  function destinoDe(L, r, i){
+    if(r + 1 >= L.rondas.length) return null;
+    if(L.feeds && L.feeds[r + 1]){
+      const f = L.feeds[r + 1];
+      for(let j = 0; j < f.length; j++){
+        if(f[j][0] === i) return { j, lado: 'a' };
+        if(f[j][1] === i) return { j, lado: 'b' };
+      }
+      return null;
+    }
+    return { j: Math.floor(i / 2), lado: i % 2 === 0 ? 'a' : 'b' };
   }
   function esByeMatch(L, r, i){
     const m = L.rondas[r][i];
@@ -1073,12 +1092,12 @@
       L.tercer = L.tercer || { a: null, b: null, g: null };
       if(i % 2 === 0) L.tercer.a = perdedor; else L.tercer.b = perdedor;
     }
-    if(r + 1 < L.rondas.length){
-      const j = Math.floor(i / 2);
-      const t = L.rondas[r + 1][j];
-      if(i % 2 === 0) t.a = cid; else t.b = cid;
+    const d = destinoDe(L, r, i);
+    if(d){
+      const t = L.rondas[r + 1][d.j];
+      if(d.lado === 'a') t.a = cid; else t.b = cid;
       // si ese combate es un pase directo, avanza de inmediato
-      if(byeEstructural(L, r + 1, j) && t.a) propagar(L, r + 1, j, t.a);
+      if(byeEstructural(L, r + 1, d.j) && t.a) propagar(L, r + 1, d.j, t.a);
     }
   }
 
@@ -1090,11 +1109,11 @@
       if(i % 2 === 0) L.tercer.a = null; else L.tercer.b = null;
       L.tercer.g = null;
     }
-    if(r + 1 < L.rondas.length){
-      const ti = Math.floor(i / 2);
-      const t = L.rondas[r + 1][ti];
-      if(i % 2 === 0) t.a = null; else t.b = null;
-      limpiarDesde(L, r + 1, ti);
+    const d = destinoDe(L, r, i);
+    if(d){
+      const t = L.rondas[r + 1][d.j];
+      if(d.lado === 'a') t.a = null; else t.b = null;
+      limpiarDesde(L, r + 1, d.j);
     }
   }
 
@@ -1110,34 +1129,55 @@
   }
 
   // Cascada natural: TODOS pelean en la primera ronda (12 inscritos = 6
-  // peleas); solo con número impar alguien pasa directo. Cada ronda
-  // siguiente se reduce a la mitad (con pase directo si queda impar).
-  function estructuraCascada(n){
-    const rondas = [];
-    let m = Math.max(1, Math.ceil(n / 2));
-    rondas.push(Array.from({ length: m }, () => ({ a: null, b: null, g: null })));
-    while(m > 1){
-      m = Math.ceil(m / 2);
-      rondas.push(Array.from({ length: m }, () => ({ a: null, b: null, g: null })));
+  // peleas); solo con número impar alguien pasa directo. TODO el cableado
+  // (incluidos los pases de rondas posteriores) queda determinado aquí,
+  // en el sorteo inicial: cuando una ronda queda impar, el pase directo
+  // va al extremo cuya cadena acumula MENOS pases — nadie recibe dos
+  // byes seguidos por diseño, y la posición se conoce desde el día uno.
+  function estructuraLlave(n){
+    const rondas = [], feeds = [null];
+    const m0 = Math.max(1, Math.ceil(n / 2));
+    rondas.push(Array.from({ length: m0 }, () => ({ a: null, b: null, g: null })));
+    let byes = new Array(m0).fill(0);
+    if(n % 2 === 1 && n > 1) byes[m0 - 1] = 1; // el impar de la ronda 1 pasa directo
+    let prev = m0;
+    while(prev > 1){
+      const f = [], nb = [];
+      if(prev % 2 === 0){
+        for(let j = 0; j < prev; j += 2){ f.push([j, j + 1]); nb.push(Math.max(byes[j], byes[j + 1])); }
+      } else if(byes[0] < byes[prev - 1]){
+        // el pase va arriba (esa cadena tiene menos byes acumulados)
+        f.push([0, null]); nb.push(byes[0] + 1);
+        for(let k = 1; k + 1 < prev; k += 2){ f.push([k, k + 1]); nb.push(Math.max(byes[k], byes[k + 1])); }
+      } else {
+        // el pase va abajo
+        for(let k = 0; k + 1 < prev - 1; k += 2){ f.push([k, k + 1]); nb.push(Math.max(byes[k], byes[k + 1])); }
+        f.push([prev - 1, null]); nb.push(byes[prev - 1] + 1);
+      }
+      rondas.push(f.map(() => ({ a: null, b: null, g: null })));
+      feeds.push(f);
+      byes = nb;
+      prev = f.length;
     }
-    return rondas;
+    return { rondas, feeds };
   }
 
   function generarLlave(cat){
     const ids = shuffle(compsDe(cat.id).map(c => c.id));
-    const rondas = estructuraCascada(ids.length);
+    const est = estructuraLlave(ids.length);
     ids.forEach((cid, i) => {
-      const m = rondas[0][Math.floor(i / 2)];
+      const m = est.rondas[0][Math.floor(i / 2)];
       if(i % 2 === 0) m.a = cid; else m.b = cid;
     });
-    const L = { modo: 'kumite', rondas, finalizada: false, podio: [] };
+    const L = { modo: 'kumite', rondas: est.rondas, feeds: est.feeds, finalizada: false, podio: [] };
     autoByes(L);
     return L;
   }
 
   // Estructura vacía para el armado manual (arrastrar competidores)
   function generarLlaveVacia(cat){
-    return { modo: 'kumite', rondas: estructuraCascada(compsDe(cat.id).length), finalizada: false, podio: [], armado: true };
+    const est = estructuraLlave(compsDe(cat.id).length);
+    return { modo: 'kumite', rondas: est.rondas, feeds: est.feeds, finalizada: false, podio: [], armado: true };
   }
 
   function nombreRonda(i, total, matches){
