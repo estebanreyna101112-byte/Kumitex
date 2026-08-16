@@ -254,6 +254,17 @@
           cuerpo += '</div></div>';
         });
         cuerpo += '</div>';
+        const modoBronce = (t.config && t.config.bronce) || 'uno';
+        if(modoBronce === 'uno' && total >= 2 && L.tercer && (L.tercer.a || L.tercer.b)){
+          const t3 = L.tercer;
+          const slotT = (cid) => cid
+            ? `<div class="br-slot ${t3.g === cid ? 'win' : ''}"><span>${esc(nom(cid))}<span class="org">${esc(org(cid))}</span></span>${t3.g === cid ? '<span class="chk">✓</span>' : ''}</div>`
+            : `<div class="br-slot empty"></div>`;
+          cuerpo += `<div style="margin-top:12px;max-width:300px;">
+            <div class="br-col-title" style="text-align:left;margin-bottom:6px;">Combate por el 3er puesto</div>
+            <div class="br-match">${slotT(t3.a)}${slotT(t3.b)}</div>
+          </div>`;
+        }
       } else {
         // sin llave: lista de inscritos para sorteo manual en papel
         cuerpo += `<table class="kata"><thead><tr><th style="width:30px;">#</th><th>Competidor</th><th>Club</th><th class="c">Resultado</th></tr></thead><tbody>`;

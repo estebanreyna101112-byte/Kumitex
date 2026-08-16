@@ -543,6 +543,22 @@
         h += '</div></div>';
       });
       h += '</div></div>';
+      // combate por el 3er puesto (torneos con un solo bronce)
+      const modoBronce = (t.config && t.config.bronce) || 'uno';
+      if(modoBronce === 'uno' && total >= 2 && L.tercer && (L.tercer.a || L.tercer.b)){
+        const t3 = L.tercer;
+        const slotT = (cid) => {
+          if(!cid) return `<div class="br-slot empty">Por definir</div>`;
+          return `<div class="br-slot ${t3.g === cid ? 'win' : ''}">
+            <span>${esc(nombreDe(cid))}<span class="borg">${esc(orgDe(cid))}</span></span>
+            ${t3.g === cid ? '<span>✓</span>' : ''}
+          </div>`;
+        };
+        h += `<div style="margin-top:10px;max-width:320px;">
+          <div class="br-col-title" style="text-align:left;margin-bottom:6px;">Combate por el 3er puesto</div>
+          <div class="br-match">${slotT(t3.a)}${slotT(t3.b)}</div>
+        </div>`;
+      }
       return h;
     }
 

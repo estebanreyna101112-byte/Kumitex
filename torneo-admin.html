@@ -464,6 +464,12 @@
               <option value="finalizado">Finalizado</option>
             </select>
           </div>
+          <div class="field"><label>Tercer lugar (kumite)</label>
+            <select id="a-bronce">
+              <option value="uno">Uno — combate por el 3er puesto</option>
+              <option value="dos">Dos — ambos semifinalistas</option>
+            </select>
+          </div>
         </div>
         <div class="fgrid fg-2">
           <div class="field"><label>Color de acento</label><input id="a-color" type="color" style="height:42px;padding:4px;"></div>
@@ -1060,6 +1066,13 @@
 
   function propagar(L, r, i, cid){
     L.rondas[r][i].g = cid;
+    // el perdedor de una semifinal queda disponible para el combate por el 3er puesto
+    if(L.rondas.length >= 2 && r === L.rondas.length - 2){
+      const m = L.rondas[r][i];
+      const perdedor = (m.a === cid) ? m.b : m.a;
+      L.tercer = L.tercer || { a: null, b: null, g: null };
+      if(i % 2 === 0) L.tercer.a = perdedor; else L.tercer.b = perdedor;
+    }
     if(r + 1 < L.rondas.length){
       const j = Math.floor(i / 2);
       const t = L.rondas[r + 1][j];
@@ -1073,12 +1086,20 @@
     const m = L.rondas[r][i];
     if(!m.g) return;
     m.g = null;
+    if(L.rondas.length >= 2 && r === L.rondas.length - 2 && L.tercer){
+      if(i % 2 === 0) L.tercer.a = null; else L.tercer.b = null;
+      L.tercer.g = null;
+    }
     if(r + 1 < L.rondas.length){
       const ti = Math.floor(i / 2);
       const t = L.rondas[r + 1][ti];
       if(i % 2 === 0) t.a = null; else t.b = null;
       limpiarDesde(L, r + 1, ti);
     }
+  }
+
+  function bronceModo(){
+    return (TORNEO.config && TORNEO.config.bronce) || 'uno';
   }
 
   function autoByes(L){
@@ -1137,12 +1158,21 @@
       { cid: final.a === final.g ? final.b : final.a, lugar: 2 }
     ].filter(p => p.cid);
     if(total >= 2){
-      L.rondas[total - 2].forEach(m => {
-        if(m.g){
-          const perdedor = m.a === m.g ? m.b : m.a;
-          if(perdedor) podio.push({ cid: perdedor, lugar: 3 });
-        }
-      });
+      if(bronceModo() === 'uno'){
+        // un solo bronce: el ganador del combate por el 3er puesto
+        const t3 = L.tercer || {};
+        if(t3.g) podio.push({ cid: t3.g, lugar: 3 });
+        else if(t3.a && !t3.b) podio.push({ cid: t3.a, lugar: 3 });
+        else if(!t3.a && t3.b) podio.push({ cid: t3.b, lugar: 3 });
+      } else {
+        // dos bronces: ambos semifinalistas perdedores
+        L.rondas[total - 2].forEach(m => {
+          if(m.g){
+            const perdedor = m.a === m.g ? m.b : m.a;
+            if(perdedor) podio.push({ cid: perdedor, lugar: 3 });
+          }
+        });
+      }
     }
     return podio;
   }
@@ -1237,6 +1267,23 @@
     });
     html += '</div></div>';
 
+    // Combate por el 3er puesto (si el torneo usa un solo bronce)
+    if(bronceModo() === 'uno' && total >= 2){
+      const t3 = L.tercer || { a: null, b: null, g: null };
+      const slotT = (cid, lado) => {
+        if(!cid) return `<div class="br-slot empty">Esperando semifinales</div>`;
+        const win = t3.g === cid;
+        return `<div class="br-slot ${win ? 'win' : ''}" data-r="T" data-m="0" data-lado="${lado}">
+          <span>${esc(compNombre(cid))}<span class="borg">${esc(compOrg(cid))}</span></span>
+          <span class="bcheck">✓</span>
+        </div>`;
+      };
+      html += `<div style="margin-top:16px;max-width:320px;">
+        <div class="br-col-title" style="text-align:left;margin-bottom:8px;">Combate por el 3er puesto</div>
+        <div class="br-match">${slotT(t3.a, 'a')}${slotT(t3.b, 'b')}</div>
+      </div>`;
+    }
+
     if(!L.finalizada){
       html += `<div class="kata-actions">
         <button class="btn btn-primary" id="br-fin" ${final.g ? '' : 'disabled'}>Finalizar y asignar podio</button>
@@ -1254,6 +1301,15 @@
     if(!L.finalizada){
       body.querySelectorAll('.br-slot[data-r]').forEach(el => {
         el.addEventListener('click', () => {
+          // combate por el 3er puesto
+          if(el.dataset.r === 'T'){
+            const t3 = L.tercer;
+            if(!t3 || !t3.a || !t3.b) return;
+            const cid = el.dataset.lado === 'a' ? t3.a : t3.b;
+            t3.g = (t3.g === cid) ? null : cid;
+            saveKata(L);
+            return;
+          }
           const r = parseInt(el.dataset.r, 10);
           const i = parseInt(el.dataset.m, 10);
           const lado = el.dataset.lado;
@@ -1301,7 +1357,15 @@
       });
 
       $('br-fin')?.addEventListener('click', () => {
-        if(!confirm('¿Finalizar la categoría? Se asignará el podio: oro y plata de la final, bronce para los semifinalistas.')) return;
+        const modoUno = bronceModo() === 'uno';
+        if(modoUno && total >= 2 && L.tercer && L.tercer.a && L.tercer.b && !L.tercer.g){
+          alert('Marca al ganador del combate por el 3er puesto antes de finalizar.');
+          return;
+        }
+        const msg = modoUno
+          ? '¿Finalizar la categoría? Podio: oro y plata de la final, y bronce del combate por el 3er puesto.'
+          : '¿Finalizar la categoría? Podio: oro y plata de la final, doble bronce para los semifinalistas.';
+        if(!confirm(msg)) return;
         const p = podioKumite(L);
         if(!p){ alert('Falta marcar el ganador de la final.'); return; }
         L.podio = p;
@@ -1659,6 +1723,7 @@
     $('a-fecha').value = TORNEO.fecha || '';
     $('a-lugar').value = TORNEO.lugar || '';
     $('a-estado').value = TORNEO.estado;
+    $('a-bronce').value = (TORNEO.config && TORNEO.config.bronce) || 'uno';
     $('a-color').value = TORNEO.color_acento || '#e2262e';
     $('a-publicado').value = String(TORNEO.publicado);
     const tieneLogo = !!TORNEO.logo_url;
@@ -1738,7 +1803,8 @@
       lugar: $('a-lugar').value.trim(),
       estado: $('a-estado').value,
       color_acento: $('a-color').value,
-      publicado: $('a-publicado').value
+      publicado: $('a-publicado').value,
+      config: { bronce: $('a-bronce').value }
     });
     const msg = $('a-msg');
     if(!r.ok){
