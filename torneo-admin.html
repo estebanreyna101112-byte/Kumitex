@@ -377,6 +377,32 @@
         <div class="stat"><div class="k">Sin categoría</div><div class="v" id="st-sincat">0</div></div>
       </div>
 
+      <div class="card" id="pre-espera-card" style="display:none;border-color:rgba(226,38,46,.45);">
+        <h2>Lista de espera <span class="badge tipo" id="pre-count" style="margin-left:6px;"></span></h2>
+        <p class="br-hint">Personas que se registraron con tu link de inscripción. Revisa sus datos y acéptalas para sumarlas a la lista de competidores.</p>
+        <div id="pre-lista"></div>
+        <p id="pre-resumen" style="color:var(--text-faint);font-size:12px;margin-top:10px;"></p>
+      </div>
+
+      <div class="card">
+        <h2>Inscripción por link</h2>
+        <p class="br-hint">Comparte un link con tus invitados y competidores para que se registren solos, sin correo electrónico. Quedan en lista de espera hasta que tú los aceptes.</p>
+        <div id="pre-link-off" style="display:none;">
+          <button type="button" class="btn btn-primary" id="pre-activar">Activar link de inscripción</button>
+        </div>
+        <div id="pre-link-on" style="display:none;">
+          <div class="field" style="margin-bottom:10px;"><label>Link para tus invitados</label>
+            <input id="pre-link" type="text" readonly onclick="this.select()">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="btn btn-ghost btn-sm" id="pre-copiar">Copiar link</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="pre-regenerar">Regenerar código</button>
+            <button type="button" class="btn btn-danger btn-sm" id="pre-desactivar">Desactivar</button>
+            <span class="msg" id="pre-link-msg" style="margin-top:0;"></span>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <h2 id="comp-form-title">Inscribir competidor</h2>
         <form id="comp-form">
@@ -569,6 +595,19 @@
   </div>
 </div>
 
+<!-- ════ MODAL: CÉDULA DE PREINSCRIPCIÓN ════ -->
+<div id="ced-modal" style="display:none;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.8);align-items:center;justify-content:center;padding:16px;">
+  <div style="max-width:640px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:10px;">
+      <strong id="ced-nombre" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Cédula</strong>
+      <button type="button" class="kata-close" id="ced-close">×</button>
+    </div>
+    <div style="padding:12px;max-height:72vh;overflow:auto;text-align:center;">
+      <img id="ced-img" alt="Cédula de identidad" style="max-width:100%;border-radius:8px;">
+    </div>
+  </div>
+</div>
+
 <!-- ════ MODAL: EVALUACIÓN DE KATA ════ -->
 <div id="kata-modal">
   <div id="kata-backdrop"></div>
@@ -594,7 +633,7 @@
   const SS_KEY = 'kumitex_t_' + SLUG;
   let SECRET = SLUG ? sessionStorage.getItem(SS_KEY) : null;
 
-  let TORNEO = null, COMPS = [], CATS = [], INSCS = [], GCONFIG = {};
+  let TORNEO = null, COMPS = [], CATS = [], INSCS = [], GCONFIG = {}, PRES = [];
 
   if(!SLUG){
     document.body.innerHTML = '<div class="login-box"><h1>Falta el torneo</h1><p>La URL debe incluir el torneo: <code>torneo-admin.html?t=tu-torneo</code></p></div>';
@@ -648,6 +687,8 @@
     CATS = k.data || [];
     INSCS = i.data || [];
     GCONFIG = g.data?.config || {};
+    const pr = await exec('pre_listar');
+    PRES = (pr.ok && pr.lista) || [];
     renderAll();
   }
 
@@ -674,7 +715,127 @@
     renderCats();
     renderTatamis();
     renderAjustes();
+    renderPre();
   }
+
+  // ═══ Inscripción por link y lista de espera ═══
+  function edadDe(nac){
+    if(!nac) return null;
+    const n = new Date(nac + 'T00:00:00'), hoy = new Date();
+    let e = hoy.getFullYear() - n.getFullYear();
+    const m = hoy.getMonth() - n.getMonth();
+    if(m < 0 || (m === 0 && hoy.getDate() < n.getDate())) e--;
+    return e;
+  }
+
+  function inscConfig(){ return (TORNEO.config && TORNEO.config.insc) || {}; }
+
+  function linkInscripcion(){
+    return location.origin + location.pathname.replace('torneo-admin.html', 'inscribirse.html')
+      + '?t=' + encodeURIComponent(SLUG) + '&c=' + encodeURIComponent(inscConfig().codigo || '');
+  }
+
+  function renderPre(){
+    const cfg = inscConfig();
+    const activo = cfg.activo === true && cfg.codigo;
+    $('pre-link-off').style.display = activo ? 'none' : 'block';
+    $('pre-link-on').style.display = activo ? 'block' : 'none';
+    if(activo) $('pre-link').value = linkInscripcion();
+
+    const pend = PRES.filter(p => p.estado === 'pendiente');
+    const acept = PRES.filter(p => p.estado === 'aceptada').length;
+    const rech = PRES.filter(p => p.estado === 'rechazada').length;
+    $('pre-espera-card').style.display = pend.length ? 'block' : 'none';
+    $('pre-count').textContent = pend.length + (pend.length === 1 ? ' pendiente' : ' pendientes');
+    $('pre-resumen').textContent = (acept || rech)
+      ? `Historial: ${acept} aceptada${acept === 1 ? '' : 's'} · ${rech} rechazada${rech === 1 ? '' : 's'}` : '';
+    $('pre-lista').innerHTML = pend.map(p => `
+      <div class="cat-card" data-pre="${p.id}">
+        <div class="info">
+          <div class="nm">${esc(p.nombre)}
+            <span class="badge">${p.sexo === 'F' ? 'Femenino' : p.sexo === 'M' ? 'Masculino' : '—'}</span>
+            <span class="badge">${edadDe(p.nacimiento) ?? '—'} años</span>
+          </div>
+          <div class="meta">${esc(p.dojo)} · ${esc(p.grado || 'Sin grado')} · ${p.peso} kg · ${p.estatura} cm</div>
+          <div class="meta">Contacto: ${esc(p.contacto)} · Emergencia: ${esc(p.emergencia)} · Nac. ${esc(p.nacimiento)}</div>
+        </div>
+        <div class="acts">
+          <button type="button" class="btn btn-ghost btn-sm" data-act="cedula">Ver cédula</button>
+          <button type="button" class="btn btn-primary btn-sm" data-act="aceptar">Aceptar</button>
+          <button type="button" class="btn btn-danger btn-sm" data-act="rechazar">Rechazar</button>
+        </div>
+      </div>`).join('');
+  }
+
+  async function guardarInsc(cfg){
+    const r = await exec('torneo_update', { config: { insc: cfg } });
+    if(!r.ok){ alert('No se pudo guardar: ' + (r.error || '')); return false; }
+    TORNEO.config = Object.assign({}, TORNEO.config, { insc: cfg });
+    renderPre();
+    return true;
+  }
+
+  function codigoNuevo(){
+    const abc = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const a = new Uint8Array(14);
+    crypto.getRandomValues(a);
+    return [...a].map(x => abc[x % abc.length]).join('');
+  }
+
+  $('pre-activar').addEventListener('click', () => {
+    const cfg = inscConfig();
+    guardarInsc({ activo: true, codigo: cfg.codigo || codigoNuevo() });
+  });
+  $('pre-desactivar').addEventListener('click', () => {
+    guardarInsc(Object.assign({}, inscConfig(), { activo: false }));
+  });
+  $('pre-regenerar').addEventListener('click', async () => {
+    if(!confirm('¿Regenerar el código? El link anterior dejará de funcionar.')) return;
+    if(await guardarInsc({ activo: true, codigo: codigoNuevo() })){
+      $('pre-link-msg').className = 'msg ok';
+      $('pre-link-msg').textContent = 'Código regenerado.';
+      setTimeout(() => $('pre-link-msg').textContent = '', 2500);
+    }
+  });
+  $('pre-copiar').addEventListener('click', async () => {
+    try{ await navigator.clipboard.writeText($('pre-link').value); }
+    catch(_){ $('pre-link').select(); document.execCommand('copy'); }
+    $('pre-link-msg').className = 'msg ok';
+    $('pre-link-msg').textContent = 'Link copiado.';
+    setTimeout(() => $('pre-link-msg').textContent = '', 2500);
+  });
+
+  $('pre-lista').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if(!btn) return;
+    const id = btn.closest('[data-pre]').dataset.pre;
+    const p = PRES.find(x => x.id === id);
+    if(!p) return;
+    if(btn.dataset.act === 'cedula'){
+      btn.disabled = true;
+      const r = await exec('pre_cedula', { id });
+      btn.disabled = false;
+      if(r.ok && r.cedula && r.cedula.startsWith('data:image/')){
+        $('ced-nombre').textContent = p.nombre;
+        $('ced-img').src = r.cedula;
+        $('ced-modal').style.display = 'flex';
+      } else alert('No se pudo cargar la cédula.');
+    } else if(btn.dataset.act === 'aceptar'){
+      btn.disabled = true; btn.textContent = 'Aceptando…';
+      const r = await exec('pre_aceptar', { id });
+      if(!r.ok){ alert('No se pudo aceptar: ' + (r.error || '')); btn.disabled = false; btn.textContent = 'Aceptar'; return; }
+      await loadAll();
+    } else if(btn.dataset.act === 'rechazar'){
+      if(!confirm(`¿Rechazar la inscripción de ${p.nombre}?`)) return;
+      const r = await exec('pre_rechazar', { id });
+      if(!r.ok){ alert('No se pudo rechazar: ' + (r.error || '')); return; }
+      p.estado = 'rechazada';
+      renderPre();
+    }
+  });
+
+  $('ced-close').addEventListener('click', () => { $('ced-modal').style.display = 'none'; $('ced-img').src = ''; });
+  $('ced-modal').addEventListener('click', (e) => { if(e.target === $('ced-modal')){ $('ced-modal').style.display = 'none'; $('ced-img').src = ''; } });
 
   // ═══ Inscripciones ═══
   function catName(id){

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inscripción — Kumitex</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --surface:#161719;
+    --surface-2:#1d1e21;
+    --border:#2a2b2f;
+    --text:#f5f4f2;
+    --text-dim:#a6a7ac;
+    --text-faint:#6d6e73;
+    --accent:#e2262e;
+    --accent-2:#ff4a52;
+    --accent-soft:rgba(226,38,46,.12);
+    --ok:#3ecf6e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;}
+  ::selection{background:var(--accent);color:#fff;}
+  a{color:inherit;}
+
+  .wrap{max-width:640px;margin:0 auto;padding:0 16px;}
+
+  header.top{border-bottom:1px solid var(--border);padding:14px 0;}
+  .top-inner{display:flex;align-items:center;gap:12px;}
+  .top-inner img{width:34px;height:34px;object-fit:contain;border-radius:6px;}
+  .top-inner .tn{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;line-height:1.2;}
+  .top-inner .org{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);}
+
+  main{padding:26px 0 80px;}
+  .intro-chip{
+    display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;
+    text-transform:uppercase;letter-spacing:.14em;color:var(--accent-2);
+    border:1px solid var(--border);border-radius:99px;padding:6px 14px;margin-bottom:14px;
+  }
+  h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(24px,6vw,32px);font-weight:600;line-height:1.15;margin-bottom:8px;}
+  .sub{color:var(--text-dim);font-size:14px;margin-bottom:24px;}
+  .sub .meta{display:flex;gap:6px 16px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--text-faint);}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 16px;margin-bottom:16px;}
+  .stitle{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent-2);margin-bottom:14px;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);margin-bottom:6px;}
+  .field input,.field select{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:12px 14px;font-size:16px;color:#fff;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s;
+  }
+  .field input::placeholder{color:var(--text-faint);}
+  .field input:focus,.field select:focus{border-color:var(--accent-2);}
+  .field .nota{font-size:12px;color:var(--text-faint);margin-top:5px;}
+  .fgrid{display:grid;gap:12px;grid-template-columns:1fr 1fr;}
+  @media(max-width:480px){.fgrid{grid-template-columns:1fr;}}
+
+  .upload-box{
+    border:1px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;
+    transition:border-color .2s;
+  }
+  .upload-box:hover{border-color:var(--accent-2);}
+  .upload-box p{font-size:13.5px;color:var(--text-dim);}
+  .upload-box .up-hint{font-size:11.5px;color:var(--text-faint);margin-top:4px;}
+  .upload-box img{max-width:100%;max-height:200px;border-radius:8px;margin-top:10px;}
+  .upload-box .up-ok{display:none;font-size:12.5px;color:var(--ok);margin-top:8px;}
+
+  .terms-row{display:flex;align-items:flex-start;gap:10px;margin:18px 0;font-size:13.5px;color:var(--text-dim);}
+  .terms-row input{width:20px;height:20px;flex:0 0 auto;margin-top:1px;accent-color:var(--accent);}
+  .terms-row a{color:var(--accent-2);text-decoration:underline;cursor:pointer;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;
+    padding:14px 22px;font-size:15px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;border:none;
+    min-height:48px;transition:background .2s;
+  }
+  .btn-primary{background:var(--accent);color:#fff;width:100%;}
+  .btn-primary:hover{filter:brightness(.92);}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+  .msg{font-size:13.5px;margin-top:12px;min-height:18px;}
+  .msg.err{color:var(--accent-2);}
+  .msg.ok{color:var(--ok);}
+
+  .center-msg{max-width:460px;margin:90px auto;padding:0 20px;text-align:center;}
+  .center-msg h1{font-size:26px;margin-bottom:10px;}
+  .center-msg p{color:var(--text-dim);font-size:15px;}
+
+  /* éxito */
+  #exito{display:none;}
+  .exito-mark{
+    width:64px;height:64px;border-radius:50%;border:2px solid var(--ok);margin:0 auto 20px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .exito-mark svg{width:30px;height:30px;}
+
+  /* modal términos */
+  #terms-modal{display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:16px;}
+  #terms-modal.open{display:flex;}
+  .terms-shell{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    max-width:560px;width:100%;max-height:82vh;display:flex;flex-direction:column;overflow:hidden;
+  }
+  .terms-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);}
+  .terms-head h3{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;}
+  .terms-close{background:none;border:none;color:var(--text-faint);font-size:24px;cursor:pointer;line-height:1;padding:4px 8px;}
+  .terms-body{padding:16px 18px;overflow-y:auto;font-size:13.5px;color:var(--text-dim);}
+  .terms-body h4{font-size:13px;color:var(--text);margin:14px 0 4px;}
+  .terms-body h4:first-child{margin-top:0;}
+  .terms-body p{margin-bottom:8px;}
+
+  .powered{text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);padding:20px 0 30px;}
+  .powered a{color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+<div id="invalido" class="center-msg" style="display:none;">
+  <h1 style="font-family:'Space Grotesk',sans-serif;">Inscripciones no disponibles</h1>
+  <p>Este link de inscripción no es válido o el organizador cerró las inscripciones. Contacta a la organización del torneo.</p>
+</div>
+
+<div id="cargando" class="center-msg"><p>Cargando…</p></div>
+
+<div id="app" style="display:none;">
+  <header class="top">
+    <div class="wrap top-inner">
+      <img src="assets/logo.svg" alt="" id="t-logo">
+      <div>
+        <div class="tn" id="t-nombre">Torneo</div>
+        <div class="org" id="t-org"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="form-view">
+      <span class="intro-chip">Inscripción de competidores</span>
+      <h1>Inscríbete en este torneo</h1>
+      <p class="sub">Completa tus datos. Quedarás en lista de espera hasta que la organización confirme tu inscripción.
+        <span class="meta" id="t-meta"></span>
+      </p>
+
+      <form id="insc-form">
+        <div class="card">
+          <div class="stitle">Tus datos</div>
+          <div class="field"><label>Nombre completo *</label>
+            <input id="f-nombre" type="text" required minlength="3" maxlength="120" placeholder="Nombre y apellidos" autocomplete="name"></div>
+          <div class="fgrid">
+            <div class="field"><label>Fecha de nacimiento *</label>
+              <input id="f-nacimiento" type="date" required>
+              <div class="nota" id="f-edad-nota"></div></div>
+            <div class="field"><label>Sexo *</label>
+              <select id="f-sexo" required><option value="">Selecciona…</option><option value="M">Masculino</option><option value="F">Femenino</option></select></div>
+          </div>
+          <div class="field"><label>Dojo o club al que perteneces *</label>
+            <input id="f-dojo" type="text" required minlength="2" maxlength="120" placeholder="Ej: Dojo Central"></div>
+          <div class="field"><label>Grado / cinturón *</label>
+            <input id="f-grado" type="text" required maxlength="60" placeholder="Ej: Cinturón negro 1er dan"></div>
+          <div class="fgrid">
+            <div class="field"><label>Peso (kg) *</label>
+              <input id="f-peso" type="number" required step="0.1" min="15" max="250" inputmode="decimal" placeholder="Ej: 66.5"></div>
+            <div class="field"><label>Estatura (cm) *</label>
+              <input id="f-estatura" type="number" required step="1" min="80" max="230" inputmode="numeric" placeholder="Ej: 172"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="stitle">Contacto</div>
+          <div class="fgrid">
+            <div class="field"><label>Número de contacto *</label>
+              <input id="f-contacto" type="tel" required minlength="5" maxlength="40" placeholder="Ej: +56 9 1234 5678" autocomplete="tel"></div>
+            <div class="field"><label>Número de emergencia *</label>
+              <input id="f-emergencia" type="tel" required minlength="5" maxlength="40" placeholder="Contacto en caso de emergencia"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="stitle">Cédula de identidad</div>
+          <div class="upload-box" id="up-box">
+            <p>Toca aquí para adjuntar una foto de tu cédula de identidad *</p>
+            <p class="up-hint">Se usa solo para verificar tu identidad y edad. Puedes tomar la foto con tu teléfono.</p>
+            <img id="up-prev" style="display:none;" alt="Vista previa de la cédula">
+            <p class="up-ok" id="up-ok">Cédula adjuntada correctamente. Toca para cambiarla.</p>
+          </div>
+          <input id="f-cedula" type="file" accept="image/*" style="display:none;">
+        </div>
+
+        <label class="terms-row">
+          <input id="f-terminos" type="checkbox" required>
+          <span>Acepto los <a id="terms-link">términos y condiciones</a> de inscripción y el tratamiento de mis datos para la organización de este torneo.</span>
+        </label>
+
+        <button type="submit" class="btn btn-primary" id="f-enviar">Enviar inscripción</button>
+        <p class="msg" id="f-msg"></p>
+      </form>
+    </div>
+
+    <div id="exito" class="center-msg" style="margin:60px auto;">
+      <div class="exito-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5 10 18.5 20 6.5" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1 style="font-family:'Space Grotesk',sans-serif;">¡Inscripción enviada!</h1>
+      <p id="exito-txt">Quedaste en la lista de espera. La organización del torneo revisará tus datos y confirmará tu inscripción.</p>
+    </div>
+  </main>
+
+  <p class="powered">con <a href="index.html">Kumitex</a></p>
+</div>
+
+<div id="terms-modal">
+  <div class="terms-shell">
+    <div class="terms-head">
+      <h3>Términos y condiciones</h3>
+      <button class="terms-close" id="terms-close" type="button">×</button>
+    </div>
+    <div class="terms-body">
+      <h4>1. Inscripción</h4>
+      <p>Al enviar este formulario solicitas participar en el torneo indicado. Tu inscripción queda en lista de espera y solo es definitiva cuando la organización del torneo la confirma. La organización puede aceptar o rechazar solicitudes según sus propios criterios (cupos, categorías, requisitos de grado, entre otros).</p>
+      <h4>2. Veracidad de los datos</h4>
+      <p>Declaras que los datos entregados (identidad, fecha de nacimiento, peso, estatura y grado) son verídicos. Datos falsos pueden significar la descalificación del torneo.</p>
+      <h4>3. Uso de tus datos</h4>
+      <p>Tus datos personales y la imagen de tu cédula se usan exclusivamente para verificar tu identidad y edad, y para la organización deportiva del evento (categorías, llaves de competencia, programa y resultados). Tu nombre, club y grado pueden aparecer en la página pública del torneo y en documentos impresos del evento. La imagen de tu cédula y tus números de contacto no se publican.</p>
+      <h4>4. Contacto de emergencia</h4>
+      <p>El número de emergencia entregado será usado por la organización únicamente en caso de accidente o urgencia durante el evento.</p>
+      <h4>5. Condición física y riesgos</h4>
+      <p>Declaras encontrarte en condiciones de salud compatibles con la práctica deportiva de artes marciales y entiendes que la competencia implica riesgos propios de la disciplina. Los menores de edad deben contar con la autorización de su padre, madre o tutor para inscribirse.</p>
+      <h4>6. Imagen del evento</h4>
+      <p>Autorizas a la organización a usar fotografías y videos del evento en los que puedas aparecer, con fines de difusión deportiva.</p>
+      <h4>7. Responsable</h4>
+      <p>El responsable del evento y del tratamiento de estos datos es la organización del torneo. Kumitex actúa solo como plataforma tecnológica de gestión.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SB_URL = 'https://rldtkomtclolhbmrphgh.supabase.co';
+  const SB_KEY = 'sb_publishable_-ac_7LjLqEIeVkkcQYQmFw_U9jMD2Mo';
+  const sb = supabase.createClient(SB_URL, SB_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  const params = new URLSearchParams(location.search);
+  const SLUG = params.get('t');
+  const CODIGO = params.get('c');
+  let CEDULA = null;
+
+  function invalido(){
+    $('cargando').style.display = 'none';
+    $('app').style.display = 'none';
+    $('invalido').style.display = 'block';
+  }
+
+  async function init(){
+    if(!SLUG || !CODIGO){ invalido(); return; }
+    const { data, error } = await sb.rpc('kumitex_insc_info', { p_slug: SLUG, p_codigo: CODIGO });
+    if(error || !data || !data.ok){ invalido(); return; }
+    $('t-nombre').textContent = data.nombre || 'Torneo';
+    document.title = `Inscripción — ${data.nombre || 'Torneo'}`;
+    $('t-org').textContent = data.organizacion || '';
+    const logo = data.logo_url || '';
+    if(logo && logo.startsWith('data:image/')) $('t-logo').src = logo;
+    if(data.color_acento && /^#[0-9a-fA-F]{3,8}$/.test(data.color_acento)){
+      document.documentElement.style.setProperty('--accent', data.color_acento);
+      document.documentElement.style.setProperty('--accent-2', data.color_acento);
+    }
+    const meta = [];
+    if(data.fecha) meta.push(data.fecha);
+    if(data.lugar) meta.push(data.lugar);
+    $('t-meta').textContent = meta.join(' · ');
+    $('cargando').style.display = 'none';
+    $('app').style.display = 'block';
+  }
+
+  // edad calculada en vivo
+  $('f-nacimiento').addEventListener('change', () => {
+    const v = $('f-nacimiento').value;
+    if(!v){ $('f-edad-nota').textContent = ''; return; }
+    const n = new Date(v + 'T00:00:00');
+    const hoy = new Date();
+    let e = hoy.getFullYear() - n.getFullYear();
+    const m = hoy.getMonth() - n.getMonth();
+    if(m < 0 || (m === 0 && hoy.getDate() < n.getDate())) e--;
+    $('f-edad-nota').textContent = (e >= 0 && e < 120) ? `Edad: ${e} años` : '';
+  });
+
+  // cédula: foto redimensionada en el navegador (nunca se sube el archivo original)
+  $('up-box').addEventListener('click', () => $('f-cedula').click());
+  $('f-cedula').addEventListener('change', () => {
+    const file = $('f-cedula').files[0];
+    if(!file) return;
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 1400;
+      const esc = Math.min(1, MAX / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * esc);
+      cv.height = Math.round(img.height * esc);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      let data = cv.toDataURL('image/jpeg', 0.82);
+      if(data.length > 850000) data = cv.toDataURL('image/jpeg', 0.6);
+      if(data.length > 850000){
+        $('f-msg').className = 'msg err';
+        $('f-msg').textContent = 'La imagen es demasiado grande. Intenta con una foto más simple o con menos resolución.';
+        return;
+      }
+      CEDULA = data;
+      $('up-prev').src = data;
+      $('up-prev').style.display = 'inline-block';
+      $('up-ok').style.display = 'block';
+      $('f-msg').textContent = '';
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      $('f-msg').className = 'msg err';
+      $('f-msg').textContent = 'No pudimos leer esa imagen. Intenta con otra foto.';
+    };
+    img.src = url;
+  });
+
+  // términos
+  $('terms-link').addEventListener('click', (e) => { e.preventDefault(); $('terms-modal').classList.add('open'); });
+  $('terms-close').addEventListener('click', () => $('terms-modal').classList.remove('open'));
+  $('terms-modal').addEventListener('click', (e) => { if(e.target === $('terms-modal')) $('terms-modal').classList.remove('open'); });
+
+  $('insc-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('f-msg');
+    msg.className = 'msg err';
+    if(!CEDULA){ msg.textContent = 'Adjunta una foto de tu cédula de identidad.'; return; }
+    if(!$('f-terminos').checked){ msg.textContent = 'Debes aceptar los términos y condiciones.'; return; }
+    const btn = $('f-enviar');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    msg.textContent = '';
+    const { data, error } = await sb.rpc('kumitex_preinscribir', {
+      p_slug: SLUG, p_codigo: CODIGO,
+      p_datos: {
+        nombre: $('f-nombre').value.trim(),
+        nacimiento: $('f-nacimiento').value,
+        sexo: $('f-sexo').value,
+        dojo: $('f-dojo').value.trim(),
+        grado: $('f-grado').value.trim(),
+        peso: $('f-peso').value,
+        estatura: $('f-estatura').value,
+        contacto: $('f-contacto').value.trim(),
+        emergencia: $('f-emergencia').value.trim(),
+        cedula_img: CEDULA,
+        terminos: 'true'
+      }
+    });
+    btn.disabled = false; btn.textContent = 'Enviar inscripción';
+    if(error || !data || !data.ok){
+      const err = data && data.error;
+      msg.textContent = err === 'ya_inscrito' ? 'Ya existe una inscripción con tu nombre y fecha de nacimiento en este torneo.'
+        : err === 'link_invalido' ? 'El link de inscripción ya no está activo.'
+        : err === 'limite_alcanzado' ? 'Se alcanzó el límite de inscripciones de este torneo.'
+        : 'No pudimos enviar tu inscripción. Revisa tus datos e intenta de nuevo.';
+      return;
+    }
+    $('form-view').style.display = 'none';
+    $('exito').style.display = 'block';
+    window.scrollTo({ top: 0 });
+  });
+
+  init();
+</script>
+</body>
+</html>
