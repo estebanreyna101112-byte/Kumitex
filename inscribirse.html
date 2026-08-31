@@ -116,6 +116,18 @@
 
   .powered{text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);padding:20px 0 30px;}
   .powered a{color:var(--text-dim);}
+
+  /* lista pública de inscritos */
+  .lst-linea{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);font-size:14px;}
+  .lst-linea:last-child{border-bottom:none;}
+  .lst-linea .org{font-size:12px;color:var(--text-faint);display:block;}
+  .lst-est{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;padding:4px 9px;border-radius:99px;white-space:nowrap;}
+  .lst-est.ok{color:var(--ok);border:1px solid rgba(62,207,110,.4);}
+  .lst-est.esp{color:var(--text-dim);border:1px solid var(--border);}
+  .lst-vacio{font-size:13px;color:var(--text-faint);padding:6px 0;}
+  .lst-sub{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);margin:14px 0 4px;}
+  .lst-sub:first-of-type{margin-top:0;}
+  .lst-sub .n{color:var(--accent-2);}
 </style>
 </head>
 <body>
@@ -201,12 +213,20 @@
       </form>
     </div>
 
-    <div id="exito" class="center-msg" style="margin:60px auto;">
+    <div id="exito" class="center-msg" style="margin:60px auto 30px;">
       <div class="exito-mark">
         <svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5 10 18.5 20 6.5" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <h1 style="font-family:'Space Grotesk',sans-serif;">¡Inscripción enviada!</h1>
       <p id="exito-txt">Quedaste en la lista de espera. La organización del torneo revisará tus datos y confirmará tu inscripción.</p>
+    </div>
+
+    <div class="card" id="lista-card" style="display:none;">
+      <div class="stitle">Inscritos en este torneo</div>
+      <div class="lst-sub">Confirmados <span class="n" id="lst-n-conf">0</span></div>
+      <div id="lst-conf"></div>
+      <div class="lst-sub">En lista de espera <span class="n" id="lst-n-esp">0</span></div>
+      <div id="lst-esp"></div>
     </div>
   </main>
 
@@ -249,6 +269,30 @@
   const CODIGO = params.get('c');
   let CEDULA = null;
 
+  function esc(s){
+    const d = document.createElement('div');
+    d.textContent = s ?? '';
+    return d.innerHTML;
+  }
+
+  // lista pública: confirmados y en espera (solo nombre y club)
+  async function cargarLista(){
+    const { data } = await sb.rpc('kumitex_insc_lista', { p_slug: SLUG, p_codigo: CODIGO });
+    if(!data || !data.ok) return;
+    const linea = (x, est, cls) => `
+      <div class="lst-linea">
+        <span>${esc(x.nombre)}<span class="org">${esc(x.org || '')}</span></span>
+        <span class="lst-est ${cls}">${est}</span>
+      </div>`;
+    $('lst-n-conf').textContent = (data.confirmados || []).length;
+    $('lst-n-esp').textContent = (data.espera || []).length;
+    $('lst-conf').innerHTML = (data.confirmados || []).map(x => linea(x, 'Confirmado', 'ok')).join('')
+      || '<p class="lst-vacio">Aún no hay confirmados.</p>';
+    $('lst-esp').innerHTML = (data.espera || []).map(x => linea(x, 'En espera', 'esp')).join('')
+      || '<p class="lst-vacio">Nadie en espera por ahora.</p>';
+    $('lista-card').style.display = 'block';
+  }
+
   function invalido(){
     $('cargando').style.display = 'none';
     $('app').style.display = 'none';
@@ -274,6 +318,8 @@
     $('t-meta').textContent = meta.join(' · ');
     $('cargando').style.display = 'none';
     $('app').style.display = 'block';
+    cargarLista();
+    setInterval(cargarLista, 60000);
   }
 
   // edad calculada en vivo
@@ -366,6 +412,7 @@
     $('form-view').style.display = 'none';
     $('exito').style.display = 'block';
     window.scrollTo({ top: 0 });
+    cargarLista();
   });
 
   init();
