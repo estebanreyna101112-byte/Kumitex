@@ -983,7 +983,7 @@
     }).join('');
     $('cat-empty').style.display = CATS.length ? 'none' : 'block';
 
-    document.querySelectorAll('.cat-card').forEach(card => {
+    document.querySelectorAll('#cat-list .cat-card').forEach(card => {
       const id = card.dataset.id;
       card.querySelector('.k-auto').addEventListener('click', async () => {
         const r = await exec('cat_auto_asignar', { id });
