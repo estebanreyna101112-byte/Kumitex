@@ -294,9 +294,9 @@
     </div>
 
     <div id="medallero-sec" style="display:none;">
-      <h2 class="sec">Medallero por club</h2>
+      <h2 class="sec">Medallero</h2>
       <div class="medal-table"><table>
-        <thead><tr><th></th><th>Club / organización</th>
+        <thead><tr><th></th><th>Competidor</th>
           <th class="c" id="mh-1"></th><th class="c" id="mh-2"></th><th class="c" id="mh-3"></th>
         </tr></thead>
         <tbody id="medallero-body"></tbody>
@@ -609,29 +609,30 @@
     }).join('');
     $('cat-empty').style.display = pub.length ? 'none' : 'block';
 
-    // ── Medallero por club (según podios de categorías finalizadas) ──
+    // ── Medallero por competidor (según podios de categorías finalizadas).
+    // Se agrupa por el ID del competidor, nunca por el texto del club:
+    // cada club se escribe distinto y fragmentaría el conteo. ──
     const medConteo = {};
     pub.filter(k => k.llave?.finalizada && Array.isArray(k.llave.podio)).forEach(k => {
       k.llave.podio.forEach(p => {
         const comp = comps.find(c => c.id === p.cid);
         if(!comp) return;
-        const org = (comp.organizacion || 'Sin club').trim();
-        if(!medConteo[org]) medConteo[org] = { oro: 0, plata: 0, bronce: 0 };
-        if(p.lugar === 1) medConteo[org].oro++;
-        else if(p.lugar === 2) medConteo[org].plata++;
-        else if(p.lugar === 3) medConteo[org].bronce++;
+        if(!medConteo[comp.id]) medConteo[comp.id] = { comp, oro: 0, plata: 0, bronce: 0 };
+        if(p.lugar === 1) medConteo[comp.id].oro++;
+        else if(p.lugar === 2) medConteo[comp.id].plata++;
+        else if(p.lugar === 3) medConteo[comp.id].bronce++;
       });
     });
-    const medFilas = Object.entries(medConteo)
-      .sort((a, b) => (b[1].oro - a[1].oro) || (b[1].plata - a[1].plata) || (b[1].bronce - a[1].bronce));
+    const medFilas = Object.values(medConteo)
+      .sort((a, b) => (b.oro - a.oro) || (b.plata - a.plata) || (b.bronce - a.bronce) || a.comp.nombre.localeCompare(b.comp.nombre));
     $('mh-1').innerHTML = medalSVG(1);
     $('mh-2').innerHTML = medalSVG(2);
     $('mh-3').innerHTML = medalSVG(3);
     if(medFilas.length){
-      $('medallero-body').innerHTML = medFilas.map(([org, m], i) => `
+      $('medallero-body').innerHTML = medFilas.map((m, i) => `
         <tr>
           <td class="pos">${i + 1}</td>
-          <td class="org">${esc(org)}</td>
+          <td class="org">${esc(m.comp.nombre)}${m.comp.organizacion ? `<span style="display:block;font-size:12px;color:var(--text-faint);font-weight:400;">${esc(m.comp.organizacion)}</span>` : ''}</td>
           <td class="c">${m.oro}</td>
           <td class="c">${m.plata}</td>
           <td class="c">${m.bronce}</td>

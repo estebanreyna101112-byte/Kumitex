@@ -330,21 +330,22 @@
         }
         cuerpo += '</div>';
       }
+      // medallero por competidor: se agrupa por ID (el nombre del club es
+      // texto libre y cada uno lo escribe distinto — fragmentaría el conteo)
       const med = {};
       K.filter(k => k.llave?.finalizada && Array.isArray(k.llave.podio)).forEach(k => {
         k.llave.podio.forEach(p => {
           const c = C.find(x => x.id === p.cid);
           if(!c) return;
-          const o = (c.organizacion || 'Sin club').trim();
-          if(!med[o]) med[o] = [0, 0, 0];
-          if(p.lugar >= 1 && p.lugar <= 3) med[o][p.lugar - 1]++;
+          if(!med[c.id]) med[c.id] = { c, m: [0, 0, 0] };
+          if(p.lugar >= 1 && p.lugar <= 3) med[c.id].m[p.lugar - 1]++;
         });
       });
-      const filas = Object.entries(med).sort((a, b) => (b[1][0] - a[1][0]) || (b[1][1] - a[1][1]) || (b[1][2] - a[1][2]));
+      const filas = Object.values(med).sort((a, b) => (b.m[0] - a.m[0]) || (b.m[1] - a.m[1]) || (b.m[2] - a.m[2]) || a.c.nombre.localeCompare(b.c.nombre));
       if(filas.length){
-        cuerpo += `<h2 class="cat-title" style="margin:22px 0 10px;">Medallero por club</h2>
-          <table class="medal"><thead><tr><th></th><th>Club</th><th class="c">${medalSVG(1)}</th><th class="c">${medalSVG(2)}</th><th class="c">${medalSVG(3)}</th></tr></thead><tbody>
-          ${filas.map(([o, m], i) => `<tr><td class="mono" style="font-size:10px;">${i + 1}</td><td><strong>${esc(o)}</strong></td><td class="c">${m[0]}</td><td class="c">${m[1]}</td><td class="c">${m[2]}</td></tr>`).join('')}
+        cuerpo += `<h2 class="cat-title" style="margin:22px 0 10px;">Medallero</h2>
+          <table class="medal"><thead><tr><th></th><th>Competidor</th><th class="c">${medalSVG(1)}</th><th class="c">${medalSVG(2)}</th><th class="c">${medalSVG(3)}</th></tr></thead><tbody>
+          ${filas.map((f, i) => `<tr><td class="mono" style="font-size:10px;">${i + 1}</td><td><strong>${esc(f.c.nombre)}</strong>${f.c.organizacion ? ` <span style="color:#888;font-size:10px;">· ${esc(f.c.organizacion)}</span>` : ''}</td><td class="c">${f.m[0]}</td><td class="c">${f.m[1]}</td><td class="c">${f.m[2]}</td></tr>`).join('')}
           </tbody></table>`;
       }
       const stats = `<div class="meta" style="margin-bottom:16px;">${C.length} competidores · ${K.length} categorías · ${new Set(C.map(c => (c.organizacion || '').trim().toLowerCase()).filter(Boolean)).size} clubes</div>`;
