@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Control del cronómetro — Kumitex</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b; --surface:#161719; --surface-2:#1d1e21; --border:#2a2b2f;
+    --text:#f5f4f2; --dim:#a6a7ac; --faint:#6d6e73;
+    --accent:#e2262e; --accent-2:#ff4a52; --ok:#3ecf6e; --warn:#ffc107;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100dvh;touch-action:manipulation;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px;}
+
+  header.top{border-bottom:1px solid var(--border);padding:12px 0;position:sticky;top:0;background:var(--bg);z-index:10;}
+  .top-inner{display:flex;align-items:center;gap:12px;}
+  .top-inner img{width:32px;height:32px;object-fit:contain;}
+  .tn{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-2);}
+  .top-inner > div{min-width:0;flex:1;}
+  .conn{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+  .conn i{width:9px;height:9px;border-radius:50%;background:var(--faint);display:inline-block;}
+  .conn.ok i{background:var(--ok);} .conn.mal i{background:var(--accent);}
+
+  main{padding:18px 0 60px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px;}
+  h2{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;margin-bottom:6px;}
+  .nota{font-size:13px;color:var(--dim);margin-bottom:14px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:6px;}
+  .field input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:16px;color:#fff;outline:none;font-family:'Inter',sans-serif;}
+  .field input:focus{border-color:var(--accent-2);}
+  .msg{font-size:13.5px;min-height:20px;margin-top:8px;color:var(--accent-2);}
+  details summary{cursor:pointer;font-size:13px;color:var(--dim);margin:10px 0 12px;text-decoration:underline;}
+
+  button{font-family:'Inter',sans-serif;cursor:pointer;border:none;color:var(--text);}
+  .btn{width:100%;min-height:54px;border-radius:12px;background:var(--accent);color:#fff;font-size:16px;font-weight:600;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .chip{min-height:46px;min-width:56px;padding:0 16px;border-radius:99px;background:var(--surface);border:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:500;}
+  .chip.on{background:rgba(226,38,46,.16);border-color:var(--accent);color:var(--accent-2);}
+  .chip:disabled{opacity:.35;}
+  .etq{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:2px 0 8px;}
+
+  .preview{background:#0a0a0b;border:1px solid var(--border);border-radius:16px;padding:16px 10px 12px;text-align:center;margin-bottom:14px;
+    background-image:linear-gradient(90deg,rgba(215,25,32,.55) 0 50%,rgba(240,240,236,.88) 50% 100%);}
+  .preview .in{background:#0a0a0b;border-radius:12px;display:inline-block;padding:8px 26px 6px;}
+  #p-reloj{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:64px;line-height:1.05;font-variant-numeric:tabular-nums;}
+  #p-estado{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.28em;color:var(--dim);margin-top:2px;}
+  .preview.ultimos #p-reloj{color:var(--warn);} .preview.fin #p-reloj{color:#ff3b3b;}
+  .lados{display:flex;justify-content:space-between;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;letter-spacing:.12em;margin-bottom:6px;padding:0 6px;}
+  .lados span{display:flex;align-items:center;gap:8px;color:var(--text);}
+  .lados span::before{content:'';width:12px;height:12px;border-radius:50%;display:inline-block;}
+  .lados span:first-child::before{background:#e8232b;} .lados span:last-child::before{background:#f4f4f2;}
+
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+  .seg button{min-height:52px;border-radius:12px;background:var(--surface);border:1px solid var(--border);font-weight:600;font-size:14px;letter-spacing:.06em;}
+  .seg button.on{background:rgba(226,38,46,.16);border-color:var(--accent);color:var(--accent-2);}
+
+  #btn-principal{min-height:92px;font-size:24px;letter-spacing:.06em;margin-bottom:12px;border-radius:16px;}
+  #btn-principal.pausar{background:var(--warn);color:#17171a;}
+  #btn-principal.reanudar{background:var(--ok);color:#0a0a0b;}
+  .fila{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .fila button{min-height:68px;border-radius:14px;background:var(--surface);border:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;}
+  .fila button:active,.chip:active,.seg button:active{filter:brightness(1.4);}
+  .fila button:disabled{opacity:.35;}
+  .ghost{width:100%;min-height:50px;border-radius:12px;background:transparent;border:1px solid var(--border);font-size:14px;color:var(--dim);margin-bottom:18px;}
+  .ghost:disabled{opacity:.35;}
+
+  .enlace input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;color:var(--dim);margin:8px 0 10px;font-family:'JetBrains Mono',monospace;}
+  .enlace .fila{margin-bottom:0;} .enlace .fila a,.enlace .fila button{min-height:48px;font-size:14px;font-family:'Inter',sans-serif;font-weight:600;display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text);}
+  .enlace .fila a{background:var(--surface);border:1px solid var(--border);border-radius:14px;}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--accent);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;display:none;z-index:20;max-width:90vw;text-align:center;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <img src="assets/logo.svg" alt="">
+    <div><div class="tn" id="tn">Cronómetro</div><div class="sub">Control remoto</div></div>
+    <span class="conn" id="conn"><i></i><span id="conn-t">…</span></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- Acceso -->
+  <section id="login" class="card" style="display:none;">
+    <h2>Entrar al control</h2>
+    <p class="nota">Escribe la clave de acceso del torneo que te dio el organizador.</p>
+    <form id="form-clave">
+      <div class="field"><label for="clave">Clave del torneo</label><input id="clave" type="password" autocomplete="current-password" required></div>
+      <button type="submit" class="btn" id="btn-entrar">Entrar</button>
+    </form>
+    <details>
+      <summary>Entrar con la cuenta del organizador</summary>
+      <form id="form-cuenta">
+        <div class="field"><label for="c-email">Correo</label><input id="c-email" type="email" autocomplete="email"></div>
+        <div class="field"><label for="c-pass">Contraseña</label><input id="c-pass" type="password" autocomplete="current-password"></div>
+        <button type="submit" class="btn">Entrar con la cuenta</button>
+      </form>
+    </details>
+    <p class="msg" id="login-msg"></p>
+  </section>
+
+  <!-- Control -->
+  <section id="panel" style="display:none;">
+    <div class="etq">Tatami</div>
+    <div class="chips" id="chips-tatami"></div>
+
+    <div class="lados"><span>AKA</span><span>SHIRO</span></div>
+    <div class="preview" id="preview"><div class="in"><div id="p-reloj">0:30</div><div id="p-estado">DESCANSO</div></div></div>
+
+    <div class="seg">
+      <button id="btn-combate">COMBATE</button>
+      <button id="btn-descanso">DESCANSO</button>
+    </div>
+
+    <button class="btn" id="btn-principal" disabled>Sincronizando reloj…</button>
+
+    <div class="fila">
+      <button id="btn-menos">− 30 s</button>
+      <button id="btn-mas">+ 30 s</button>
+    </div>
+
+    <div class="etq">Tiempo del combate</div>
+    <div class="chips" id="chips-tiempo"></div>
+
+    <button class="ghost" id="btn-reiniciar">Reiniciar</button>
+
+    <div class="card enlace">
+      <h2 style="font-size:16px;">Pantalla de este tatami</h2>
+      <input id="link-pantalla" readonly>
+      <div class="fila"><button id="btn-copiar">Copiar enlace</button><a id="btn-abrir" target="_blank" rel="noopener">Abrir pantalla</a></div>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script src="assets/crono-comun.js"></script>
+<script>
+  const P = new URLSearchParams(location.search);
+  const SLUG = (P.get('t') || '').trim();
+  let TAT = Math.max(1, Math.min(8, parseInt(P.get('tatami') || '1', 10) || 1));
+  let NTAT = 1;
+  let SECRET = null;
+  let ST = null;               // último estado conocido del tatami (con las órdenes propias ya aplicadas)
+  let finEscrito = false;
+  const SS = 'kumitex_t_' + SLUG;
+  const BASE0 = { modo: 'descanso', dur: 30, estado: 'listo', rest: 30, fin: 0, v: 0 };
+  const $ = (id) => document.getElementById(id);
+  const cur = () => ST || BASE0;
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+  function toast(t){
+    const el = $('toast');
+    el.textContent = t;
+    el.style.display = 'block';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.style.display = 'none', 3200);
+  }
+
+  // ═══ Acceso ═══
+  const verificar = async (secret) => {
+    const r = await CRONO.rpc('kumitex_t_exec', { p_slug: SLUG, p_secret: secret, p_action: 'verificar', p_payload: {} });
+    return !!(r && r.ok === true);
+  };
+  const exec = (action, payload = {}) =>
+    CRONO.rpc('kumitex_t_exec', { p_slug: SLUG, p_secret: SECRET, p_action: action, p_payload: payload });
+
+  async function intentarSesion(){
+    let tokCuenta = null;
+    try{ tokCuenta = localStorage.getItem('kumitex_cuenta_token'); }catch(e){}
+    for(const c of [sessionStorage.getItem(SS), tokCuenta].filter(Boolean)){
+      if(await verificar(c)){ SECRET = c; return true; }
+    }
+    return false;
+  }
+  $('form-clave').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('login-msg').textContent = '';
+    const c = $('clave').value;
+    if(await verificar(c)){ SECRET = c; sessionStorage.setItem(SS, c); arrancar(); }
+    else $('login-msg').textContent = 'Clave incorrecta.';
+  });
+  $('form-cuenta').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('login-msg').textContent = '';
+    const r = await CRONO.rpc('kumitex_login', { p_email: $('c-email').value.trim(), p_password: $('c-pass').value });
+    if(r && r.ok && await verificar(r.token)){ SECRET = r.token; sessionStorage.setItem(SS, r.token); arrancar(); }
+    else $('login-msg').textContent = 'Correo o contraseña incorrectos, o esa cuenta no administra este torneo.';
+  });
+
+  // ═══ Órdenes ═══
+  async function enviar(parche){
+    const base = cur();
+    const nuevo = { ...base, ...parche, v: (base.v || 0) + 1 };
+    ST = nuevo;
+    pintar();
+    const r = await exec('torneo_update', { config: { ['crono' + TAT]: nuevo } });
+    if(!r || !r.ok){
+      toast('No se pudo enviar la orden. Revisa la conexión.');
+      ST = null;
+      await traer();
+    }
+  }
+  const rem = () => CRONO.restante(cur());
+
+  function principal(){
+    const e = cur();
+    if(e.modo !== 'combate') return;
+    if(e.estado === 'corriendo'){
+      enviar({ estado: 'pausa', rest: +rem().toFixed(2) });
+    }else if(e.estado === 'listo' || e.estado === 'pausa'){
+      if(!CRONO.sincronizado) return;
+      const r = e.rest > 0 ? e.rest : e.dur;
+      enviar({ estado: 'corriendo', rest: r, fin: Math.round(CRONO.ahora() + r * 1000) });
+    }else{
+      enviar({ estado: 'listo', rest: e.dur, fin: 0 });
+    }
+  }
+  function ajustar(delta){
+    const e = cur();
+    if(e.modo !== 'combate') return;
+    if(e.estado === 'listo'){
+      const d = clamp((e.dur || 30) + delta, 30, 600);
+      enviar({ dur: d, rest: d });
+    }else if(e.estado === 'pausa'){
+      enviar({ rest: Math.max(0, e.rest + delta) });
+    }else if(e.estado === 'corriendo'){
+      if(!CRONO.sincronizado) return;
+      const r = Math.max(0, rem() + delta);
+      enviar({ rest: r, fin: Math.round(CRONO.ahora() + r * 1000) });
+    }else if(e.estado === 'fin' && delta > 0){
+      enviar({ estado: 'pausa', rest: delta });
+    }
+  }
+  function fijarTiempo(s){
+    const e = cur();
+    if(e.estado === 'corriendo') return;
+    enviar({ dur: s, rest: s, estado: 'listo', fin: 0 });
+  }
+  const reiniciar = () => enviar({ estado: 'listo', rest: cur().dur, fin: 0 });
+  const poner = (modo) => enviar({ modo, estado: 'listo', rest: cur().dur, fin: 0 });
+
+  $('btn-principal').addEventListener('click', principal);
+  $('btn-menos').addEventListener('click', () => ajustar(-30));
+  $('btn-mas').addEventListener('click', () => ajustar(30));
+  $('btn-reiniciar').addEventListener('click', reiniciar);
+  $('btn-combate').addEventListener('click', () => poner('combate'));
+  $('btn-descanso').addEventListener('click', () => poner('descanso'));
+  $('btn-copiar').addEventListener('click', async () => {
+    try{ await navigator.clipboard.writeText($('link-pantalla').value); toast('Enlace copiado'); }
+    catch(e){ $('link-pantalla').select(); document.execCommand('copy'); toast('Enlace copiado'); }
+  });
+
+  // ═══ Dibujo ═══
+  function pintar(){
+    const e = cur();
+    const combate = e.modo === 'combate';
+    const r = CRONO.restante(e);
+    const corriendo = e.estado === 'corriendo';
+    const terminado = e.estado === 'fin' || (corriendo && r <= 0);
+    $('p-reloj').textContent = CRONO.fmt(r);
+    $('p-estado').textContent = !combate ? 'DESCANSO' : terminado ? 'FIN' : corriendo ? 'EN COMBATE' : e.estado === 'pausa' ? 'PAUSA' : 'LISTO';
+    $('preview').classList.toggle('ultimos', combate && corriendo && r > 0 && r <= 10);
+    $('preview').classList.toggle('fin', combate && terminado);
+
+    $('btn-combate').classList.toggle('on', combate);
+    $('btn-descanso').classList.toggle('on', !combate);
+
+    const bp = $('btn-principal');
+    bp.classList.remove('pausar', 'reanudar');
+    if(!combate){ bp.textContent = 'Inicia un combate primero'; bp.disabled = true; }
+    else if(!CRONO.sincronizado && !corriendo){ bp.textContent = 'Sincronizando reloj…'; bp.disabled = true; }
+    else if(corriendo && !terminado){ bp.textContent = 'PAUSAR'; bp.classList.add('pausar'); bp.disabled = false; }
+    else if(terminado){ bp.textContent = 'REINICIAR'; bp.disabled = false; }
+    else if(e.estado === 'pausa'){ bp.textContent = 'REANUDAR'; bp.classList.add('reanudar'); bp.disabled = false; }
+    else { bp.textContent = 'INICIAR'; bp.disabled = false; }
+
+    $('btn-menos').disabled = !combate || e.estado === 'fin' || (e.estado === 'listo' && e.dur <= 30);
+    $('btn-mas').disabled = !combate;
+    $('btn-reiniciar').disabled = !combate;
+    document.querySelectorAll('.chip-tiempo').forEach(b => {
+      b.classList.toggle('on', +b.dataset.s === e.dur);
+      b.disabled = !combate || corriendo;
+    });
+  }
+
+  function dibujarChips(){
+    $('chips-tatami').innerHTML = Array.from({ length: NTAT }, (_, i) =>
+      `<button class="chip ${i + 1 === TAT ? 'on' : ''}" data-t="${i + 1}">${i + 1}</button>`).join('');
+    $('chips-tatami').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+      TAT = +b.dataset.t; ST = null; finEscrito = false;
+      const u = new URL(location.href); u.searchParams.set('tatami', TAT); history.replaceState(null, '', u);
+      dibujarChips(); enlace(); traer();
+    }));
+  }
+  function enlace(){
+    const u = new URL('cronometro.html', location.href);
+    u.searchParams.set('t', SLUG); u.searchParams.set('tatami', TAT);
+    $('link-pantalla').value = u.href;
+    $('btn-abrir').href = u.href;
+  }
+  $('chips-tiempo').innerHTML = [30, 60, 90, 120, 150, 180].map(s =>
+    `<button class="chip chip-tiempo" data-s="${s}">${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}</button>`).join('');
+  $('chips-tiempo').querySelectorAll('.chip-tiempo').forEach(b => b.addEventListener('click', () => fijarTiempo(+b.dataset.s)));
+
+  // ═══ Sincronía con el servidor ═══
+  async function traer(){
+    const e = await CRONO.estado(SLUG, TAT);
+    $('conn').className = 'conn ' + (e === undefined ? 'mal' : 'ok');
+    $('conn-t').textContent = e === undefined ? 'sin conexión' : 'en línea';
+    if(e === undefined) return;
+    if(e && (!ST || (e.v || 0) >= (ST.v || 0))) ST = e;
+    else if(!e && !ST) ST = null;
+    pintar();
+  }
+  function tick(){
+    const e = cur();
+    if(e.estado === 'corriendo' && e.modo === 'combate'){
+      if(CRONO.restante(e) <= 0 && !finEscrito){ finEscrito = true; enviar({ estado: 'fin', rest: 0 }); }
+    }else finEscrito = false;
+    pintar();
+  }
+
+  async function arrancar(){
+    $('login').style.display = 'none';
+    $('panel').style.display = 'block';
+    const t = await CRONO.leer(SLUG, 'nombre,tat:config->tatamis');
+    if(t.ok && t.fila){
+      $('tn').textContent = t.fila.nombre || 'Cronómetro';
+      document.title = `Control del cronómetro — ${t.fila.nombre || 'Kumitex'}`;
+      NTAT = clamp(parseInt(t.fila.tat, 10) || 1, 1, 8);
+      if(TAT > NTAT) NTAT = TAT;
+    }
+    dibujarChips(); enlace(); pintar();
+    CRONO.medirReloj().then(() => pintar());
+    traer();
+    setInterval(traer, 1200);
+    setInterval(tick, 250);
+    try{ if('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {}); }catch(e){}
+  }
+
+  (async () => {
+    if(!SLUG){ $('login').style.display = 'block'; $('login-msg').textContent = 'Falta el torneo en la dirección (?t=…).'; return; }
+    if(await intentarSesion()) arrancar();
+    else { $('login').style.display = 'block'; $('conn-t').textContent = ''; }
+  })();
+</script>
+</body>
+</html>

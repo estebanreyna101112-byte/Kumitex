@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cronómetro — Kumitex</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#0a0a0b; --text:#f5f4f2; --dim:#a6a7ac; --faint:#6d6e73; --acento:#e2262e; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
+
+  /* ── Descanso: logo del organizador ── */
+  #descanso{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3vmin;padding:4vmin;
+    background:
+      linear-gradient(rgba(245,244,242,.04) 1px,transparent 1px) 0 0/8vmin 8vmin,
+      linear-gradient(90deg,rgba(245,244,242,.04) 1px,transparent 1px) 0 0/8vmin 8vmin,
+      radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--acento) 22%,transparent),transparent 62%),
+      var(--bg);}
+  #logo{max-width:62vmin;max-height:50vmin;object-fit:contain;filter:drop-shadow(0 1vmin 4vmin rgba(0,0,0,.5));}
+  #nombre{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:min(6vw,9vh);text-align:center;line-height:1.1;max-width:90vw;}
+  #org{font-family:'JetBrains Mono',monospace;font-size:min(2.2vw,3.4vh);letter-spacing:.22em;text-transform:uppercase;color:var(--dim);text-align:center;}
+  #tag{font-family:'JetBrains Mono',monospace;font-size:min(2.2vw,3.4vh);letter-spacing:.3em;color:var(--acento);}
+
+  /* ── Combate: AKA (rojo) vs SHIRO (blanco) ── */
+  #combate{position:fixed;inset:0;display:none;}
+  .lado{position:absolute;top:0;bottom:0;width:50%;display:flex;align-items:flex-start;justify-content:center;padding-top:4vh;}
+  .lado span{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:.1em;font-size:min(8vw,15vh);}
+  .aka{left:0;background:linear-gradient(180deg,#e8232b,#b00f15);}
+  .aka span{color:#fff;}
+  .shiro{right:0;background:linear-gradient(180deg,#ffffff,#e3e3df);}
+  .shiro span{color:#17171a;}
+  .centro{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#0a0a0b;border:.7vmin solid rgba(255,255,255,.14);
+    border-radius:3.4vmin;padding:2.6vmin 5vmin 2.2vmin;text-align:center;box-shadow:0 3vmin 10vmin rgba(0,0,0,.6);}
+  #reloj{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:min(21vw,44vh);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.02em;}
+  #estado{font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:.32em;font-size:min(2.3vw,4.2vh);color:var(--dim);margin-top:1.6vh;}
+  #tatami-c{font-family:'JetBrains Mono',monospace;font-size:min(1.9vw,3vh);letter-spacing:.3em;color:var(--faint);margin-top:1.2vh;}
+  #combate.ultimos #reloj{color:#ffc107;}
+  #combate.pausa #estado{color:#ffc107;animation:pulso 1.1s ease-in-out infinite;}
+  #combate.fin #reloj{color:#ff3b3b;animation:parpadeo .5s steps(2,jump-none) 8;}
+  #combate.fin #estado{color:#ff3b3b;}
+  @keyframes pulso{50%{opacity:.25;}}
+  @keyframes parpadeo{50%{opacity:.15;}}
+
+  @media (orientation:portrait){
+    .lado span{font-size:min(10vw,7vh);}
+    #reloj{font-size:min(27vw,16vh);}
+    #estado{font-size:min(3vw,2vh);}
+    .centro{padding:2vmin 4vmin 1.8vmin;}
+  }
+
+  #ayuda{position:fixed;left:0;right:0;bottom:1.4vh;text-align:center;font-size:min(1.8vw,2.6vh);color:var(--faint);transition:opacity .6s;pointer-events:none;z-index:5;}
+  #ayuda.oculta{opacity:0;}
+  #aviso{position:fixed;top:1.4vh;left:50%;transform:translateX(-50%);background:rgba(226,38,46,.92);color:#fff;font-size:min(1.8vw,2.6vh);padding:.8vh 2vw;border-radius:99px;display:none;z-index:6;}
+  #noexiste{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;font-family:'Space Grotesk',sans-serif;font-size:min(5vw,7vh);padding:6vw;}
+</style>
+</head>
+<body>
+
+<div id="descanso">
+  <img id="logo" src="assets/logo.svg" alt="">
+  <div id="nombre"></div>
+  <div id="org"></div>
+  <div id="tag"></div>
+</div>
+
+<div id="combate">
+  <div class="lado aka"><span>AKA</span></div>
+  <div class="lado shiro"><span>SHIRO</span></div>
+  <div class="centro">
+    <div id="reloj">0:30</div>
+    <div id="estado">LISTO</div>
+    <div id="tatami-c"></div>
+  </div>
+</div>
+
+<div id="noexiste">Torneo no encontrado</div>
+<div id="aviso">Sin conexión: el reloj sigue, pero no recibe órdenes</div>
+<div id="ayuda">Toca la pantalla para activar el sonido y la pantalla completa</div>
+
+<script src="assets/crono-comun.js"></script>
+<script>
+  const P = new URLSearchParams(location.search);
+  const SLUG = (P.get('t') || '').trim();
+  const TATAMI = Math.max(1, Math.min(8, parseInt(P.get('tatami') || '1', 10) || 1));
+  const $ = (id) => document.getElementById(id);
+
+  let ESTADO = null;
+  let LISTO_RELOJ = false;
+  let sinConexion = 0;
+  let ultimoSonido = null;
+
+  // ═══ Datos del torneo (logo, nombre, color): se piden una sola vez ═══
+  async function cargarTorneo(){
+    if(!SLUG){ $('noexiste').style.display = 'flex'; $('descanso').style.display = 'none'; return false; }
+    const r = await CRONO.leer(SLUG, 'nombre,organizacion,logo_url,color_acento');
+    if(r.ok && !r.fila){ $('noexiste').style.display = 'flex'; $('descanso').style.display = 'none'; return false; }
+    if(!r.ok) return true;
+    const t = r.fila;
+    $('nombre').textContent = t.nombre || '';
+    $('org').textContent = t.organizacion || '';
+    $('tag').textContent = 'TATAMI ' + TATAMI;
+    $('tatami-c').textContent = 'TATAMI ' + TATAMI;
+    document.title = `Cronómetro · Tatami ${TATAMI} — ${t.nombre || 'Kumitex'}`;
+    if(t.logo_url && /^data:image\//.test(t.logo_url)) $('logo').src = t.logo_url;
+    if(t.color_acento && /^#[0-9a-fA-F]{3,8}$/.test(t.color_acento)) document.documentElement.style.setProperty('--acento', t.color_acento);
+    return true;
+  }
+
+  // ═══ Estado del tatami: cada 0,6 s en combate, cada 2 s en descanso ═══
+  async function consultar(){
+    const e = await CRONO.estado(SLUG, TATAMI);
+    if(e === undefined){
+      sinConexion++;
+      if(sinConexion >= 3) $('aviso').style.display = 'block';
+    }else{
+      sinConexion = 0;
+      $('aviso').style.display = 'none';
+      ESTADO = e;
+    }
+    setTimeout(consultar, ESTADO && ESTADO.modo === 'combate' ? 600 : 2000);
+  }
+
+  // ═══ Sonido de fin ═══
+  let AC = null;
+  function audio(){
+    if(!AC){ try{ AC = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){} }
+    if(AC && AC.state === 'suspended') AC.resume();
+  }
+  function bocina(){
+    audio();
+    if(!AC) return;
+    const t = AC.currentTime;
+    [[880, 0], [660, 0.0]].forEach(([f]) => {
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.type = 'square'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.35, t + 0.03);
+      g.gain.setValueAtTime(0.35, t + 1.1);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
+      o.connect(g); g.connect(AC.destination);
+      o.start(t); o.stop(t + 1.6);
+    });
+  }
+
+  // ═══ Dibujo ═══
+  function pintar(){
+    const e = ESTADO;
+    const enCombate = !!e && e.modo === 'combate' && LISTO_RELOJ;
+    $('descanso').style.display = enCombate ? 'none' : 'flex';
+    $('combate').style.display = enCombate ? 'block' : 'none';
+    document.body.dataset.vista = enCombate ? 'combate' : 'descanso';
+
+    if(enCombate){
+      const rem = CRONO.restante(e);
+      const corriendo = e.estado === 'corriendo';
+      const terminado = e.estado === 'fin' || (corriendo && rem <= 0);
+      $('reloj').textContent = CRONO.fmt(rem);
+      $('estado').textContent = terminado ? 'FIN' : corriendo ? 'EN COMBATE' : e.estado === 'pausa' ? 'PAUSA' : 'LISTO';
+      const c = $('combate');
+      c.classList.toggle('ultimos', corriendo && rem > 0 && rem <= 10);
+      c.classList.toggle('pausa', e.estado === 'pausa');
+      c.classList.toggle('fin', terminado);
+
+      if(corriendo && rem <= 0 && ultimoSonido !== e.fin){
+        ultimoSonido = e.fin;
+        if(CRONO.ahora() - e.fin < 4000) bocina();   // no suena al recargar la página tiempo después
+      }
+    }
+    requestAnimationFrame(pintar);
+  }
+
+  // ═══ Pantalla completa, sonido y pantalla encendida ═══
+  let wake = null;
+  async function mantenerEncendida(){
+    try{ if('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); }catch(e){}
+  }
+  function alternarPantallaCompleta(){
+    if(!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    else document.exitFullscreen?.();
+  }
+  document.addEventListener('click', () => {
+    audio();
+    $('ayuda').classList.add('oculta');
+    mantenerEncendida();
+    alternarPantallaCompleta();
+  });
+  document.addEventListener('keydown', (ev) => { if(ev.key === 'f' || ev.key === 'F') alternarPantallaCompleta(); });
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && wake) mantenerEncendida(); });
+  setTimeout(() => $('ayuda').classList.add('oculta'), 12000);
+
+  // ═══ Arranque ═══
+  (async () => {
+    const existe = await cargarTorneo();
+    if(!existe) return;
+    consultar();
+    pintar();
+    await CRONO.medirReloj();
+    LISTO_RELOJ = true;
+    setInterval(() => CRONO.medirReloj(), 5 * 60 * 1000);
+  })();
+</script>
+</body>
+</html>
