@@ -399,10 +399,15 @@
     if(!SLUG){ $('not-found').style.display = 'block'; return; }
 
     if(PRUEBA && !PRUEBA_OK){
-      const saved = sessionStorage.getItem(SS_KEY);
-      if(saved && await verificarPrueba(saved)){
-        PRUEBA_OK = true;
-      } else {
+      // clave del torneo guardada en la sesión, o la sesión de la cuenta dueña
+      // (quien administra con su cuenta no tiene una clave de torneo aparte)
+      let cuentaTok = null;
+      try{ cuentaTok = localStorage.getItem('kumitex_cuenta_token'); }catch(e){}
+      const candidatos = [sessionStorage.getItem(SS_KEY), cuentaTok].filter(Boolean);
+      for(const c of candidatos){
+        if(await verificarPrueba(c)){ PRUEBA_OK = true; break; }
+      }
+      if(!PRUEBA_OK){
         $('gate').style.display = 'block';
         return;
       }
